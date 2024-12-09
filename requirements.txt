@@ -1,0 +1,6 @@
+Flask
+Flask-Session
+Flask-SQLAlchemy
+python-dotenv
+Werkzeug
+psycopg2-binary
