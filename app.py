@@ -109,6 +109,10 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for("index"))
 
+@app.route('/privacy-policy')
+def privacy_policy():
+    return render_template('privacy_policy.html')
+
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
