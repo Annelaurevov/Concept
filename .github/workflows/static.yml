@@ -15,11 +15,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy to GitHub Pages
-        uses: actions/configure-pages@v2
-
-      - name: Upload artifacts
+      - name: Prepare static files for GitHub Pages
         run: |
           mkdir -p output
-          cp -r * output/
-          echo "Files prepared in output/ directory."
+          find . -mindepth 1 -maxdepth 1 ! -name 'output' -exec cp -r {} output/ \;
+
+      - name: Deploy to GitHub Pages
+        uses: actions/configure-pages@v2
+        with:
+          folder: output
