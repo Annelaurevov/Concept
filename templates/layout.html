@@ -8,24 +8,25 @@
 </head>
 <body>
     <header>
-        <div class="logo-container">
-            <a href="{{ url_for('index') }}">
-                <img src="{{ url_for('static', filename='logo1.png') }}" alt="Concept Logo" class="logo">
-            </a>
+        <div class="header-container">
+            <div class="logo-container">
+                <a href="{{ url_for('index') }}">
+                    <img src="{{ url_for('static', filename='image.png') }}" alt="Concept Logo" class="logo">
+                </a>
+            </div>
+            <nav class="navbar">
+                <ul class="nav-links">
+                    <li><a href="{{ url_for('contact') }}">Contact</a></li>
+                    <li><a href="{{ url_for('about') }}">About Us</a></li>
+                    {% if not session.get("user_id") %}
+                        <li><a href="{{ url_for('login') }}">Log In</a></li>
+                        <li><a href="{{ url_for('register') }}">Register</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('logout') }}">Log Out</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
         </div>
-        <nav class="navbar">
-            <ul class="nav-links">
-                <li><a href="{{ url_for('index') }}">Home</a></li>
-                <li><a href="{{ url_for('contact') }}">Contact</a></li>
-                <li><a href="{{ url_for('about') }}">About Us</a></li>
-                {% if not session.get("user_id") %}
-                    <li><a href="{{ url_for('login') }}">Log In</a></li>
-                    <li><a href="{{ url_for('register') }}">Register</a></li>
-                {% else %}
-                    <li><a href="{{ url_for('logout') }}">Log Out</a></li>
-                {% endif %}
-            </ul>
-        </nav>
     </header>
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -38,6 +39,4 @@
     {% endwith %}
     <main>
         {% block main %}{% endblock %}
-    </main>
-</body>
-</html>
+ 

@@ -22,9 +22,9 @@ db.init_app(app)
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+app.config['SERVER_NAME'] = 'localhost:5000'
 
 Session(app)
-
 
 # Decorator to enforce login
 def login_required(f):
@@ -37,10 +37,29 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
 @app.route('/')
 def index():
-    return render_template("index.html")
+    # Unsplash API-instellingen
+    url = "https://api.unsplash.com/search/photos"
+    headers = {
+        "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
+    }
+    params = {
+        "query": "interior design",  # Zoekterm
+        "per_page": 9,  # Aantal resultaten per pagina
+    }
 
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()  # Controleer op fouten
+        data = response.json()
+        images = [{"url": img["urls"]["regular"]} for img in data["results"]]
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching images: {e}")
+        images = []
+
+    return render_template('index.html', images=images)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -124,4 +143,4 @@ def about():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run()
+    app.run(debug=True)
