@@ -15,12 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Prepare static files for GitHub Pages
-        run: |
-          mkdir -p output
-          find . -mindepth 1 -maxdepth 1 ! -name 'output' -exec cp -r {} output/ \;
-
       - name: Deploy to GitHub Pages
         uses: actions/configure-pages@v2
         with:
-          folder: output
+          folder: .
