@@ -16,3 +16,18 @@ class User(db.Model):
     def check_password(self, password):
         """Check if the provided password matches the stored hash."""
         return check_password_hash(self.password_hash, password)
+    
+class SavedImage(db.Model):
+    __tablename__ = "saved_images"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    image_id = db.Column(db.String, nullable=False)
+    url = db.Column(db.String, nullable=False)
+    description = db.Column(db.String, nullable=True)
+
+class Favorite(db.Model):
+    __tablename__ = "favorites"  # Optioneel, voor consistentie
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    url = db.Column(db.String, nullable=False)
+    description = db.Column(db.String, nullable=True)

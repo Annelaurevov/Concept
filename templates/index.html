@@ -3,25 +3,24 @@
 {% block title %}Home{% endblock %}
 
 {% block main %}
-<div class="fullscreen-gallery">
+
+<div class="image-gallery">
     {% if images %}
-        <button class="nav-btn left-btn" onclick="changeImage(-1)">&#10094;</button>
-        <img id="current-image" src="{{ images[0].url }}" alt="Unsplash Image">
-        <button class="nav-btn right-btn" onclick="changeImage(1)">&#10095;</button>
+        {% for image in images %}
+        <div class="image-container">
+            <img src="{{ image.url }}" alt="Unsplash Image">
+            <form method="POST" action="{{ url_for('save_image') }}">
+                <input type="hidden" name="image_id" value="{{ loop.index }}">
+                <input type="hidden" name="image_url" value="{{ image.url }}">
+                <input type="hidden" name="description" value="{{ image.description or '' }}">
+                <button type="submit" class="heart-button">
+                    ♥
+                </button>
+            </form>            
+        </div>
+        {% endfor %}
     {% else %}
         <p>No images available at the moment. Please try again later.</p>
     {% endif %}
 </div>
-
-<script>
-    let images = {{ images|tojson }};
-    let currentIndex = 0;
-
-    function changeImage(direction) {
-        if (images.length > 0) {
-            currentIndex = (currentIndex + direction + images.length) % images.length;
-            document.getElementById('current-image').src = images[currentIndex].url;
-        }
-    }
-</script>
 {% endblock %}

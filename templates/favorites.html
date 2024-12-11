@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block title %}Favorites{% endblock %}
+
+{% block main %}
+<h1>Your Saved Images</h1>
+<div class="image-gallery">
+    {% if saved_images %}
+        {% for image in saved_images %}
+        <div class="image-container">
+            <img src="{{ image.url }}" alt="Saved Image">
+            <p>{{ image.description or "No description available" }}</p>
+            <form method="POST" action="{{ url_for('delete_image') }}">
+                <input type="hidden" name="image_id" value="{{ image.id }}">
+                <button type="submit">Delete</button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>No saved images yet. Start saving your favorites!</p>
+    {% endif %}
+</div>
+{% endblock %}

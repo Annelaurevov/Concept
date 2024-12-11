@@ -1,7 +1,7 @@
 import os
 import requests
 
-from flask import Flask, session, render_template, request, redirect, flash, url_for
+from flask import Flask, session, render_template, request, redirect, flash, url_for, jsonify
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -22,9 +22,16 @@ db.init_app(app)
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
-app.config['SERVER_NAME'] = 'localhost:5000'
 
 Session(app)
+
+CATEGORIES = {
+    "interior": "interior design",
+    "nature": "nature landscapes",
+    "art": "modern art",
+    "fashion": "fashion streetwear",
+    "travel": "travel destinations"
+}
 
 # Decorator to enforce login
 def login_required(f):
@@ -40,16 +47,19 @@ def login_required(f):
 
 @app.route('/')
 def index():
+    category = request.args.get('category', 'interior')  # Default category
+    query = request.args.get('query', '')  # Search term
+    
     # Unsplash API-instellingen
     url = "https://api.unsplash.com/search/photos"
     headers = {
         "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
     }
     params = {
-        "query": "interior design",  # Zoekterm
+        "query": f"{category} {query}",  # Zoekterm met categorie
         "per_page": 9,  # Aantal resultaten per pagina
     }
-
+    
     try:
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()  # Controleer op fouten
@@ -59,7 +69,7 @@ def index():
         print(f"Error fetching images: {e}")
         images = []
 
-    return render_template('index.html', images=images)
+    return render_template('index.html', images=images, category=category)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -67,6 +77,8 @@ def register():
         username = request.form.get("username")
         password = request.form.get("password")
         confirm_password = request.form.get("confirm-password")
+        print(f"Password: {password}, Confirm Password: {confirm_password}")
+
 
         if not username or not password:
             flash("Both username and password are required.", "error")
@@ -128,10 +140,6 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for("index"))
 
-@app.route('/privacy-policy')
-def privacy_policy():
-    return render_template('privacy_policy.html')
-
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
@@ -140,7 +148,81 @@ def contact():
 def about():
     return render_template('about.html')
 
+
+@app.route('/save', methods=["POST"])
+@login_required
+def save_image():
+    image_id = request.form.get("image_id")
+    image_url = request.form.get("image_url")
+    description = request.form.get("description")
+
+    if not description:
+        description = "No description available"
+    
+    # Debugging logs
+    print(f"Received data: image_id={image_id}, image_url={image_url}, description={description}")
+    
+    if not image_id or not image_url:
+        return jsonify({"success": False, "message": "Missing image data"}), 400
+
+    # Controleer of de afbeelding al is opgeslagen
+    existing = SavedImage.query.filter_by(user_id=session['user_id'], image_id=image_id).first()
+    if existing:
+        return jsonify({"success": False, "message": "Image already saved"}), 409
+
+    # Opslaan in de database
+    new_saved_image = SavedImage(
+        user_id=session['user_id'],
+        image_id=image_id,
+        url=image_url,
+        description=description or "No description available"
+    )
+    try:
+        db.session.add(new_saved_image)
+        db.session.commit()
+        flash("Image saved successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving image: {e}")
+        flash("Error saving image. Please try again.", "error")
+     
+    return redirect(url_for("favorites"))
+    
+
+@app.route('/favorites')
+@login_required
+def favorites():
+    # Haal opgeslagen afbeeldingen van de gebruiker op
+    user_id = session["user_id"]
+    saved_images = SavedImage.query.filter_by(user_id=user_id).all()
+    return render_template('favorites.html', saved_images=saved_images)
+
+@app.route('/delete', methods=["POST"])
+@login_required
+def delete_image():
+    image_id = request.form.get("image_id")
+
+    if not image_id:
+        flash("Missing image data. Cannot delete.", "error")
+        return redirect(url_for("favorites"))
+
+    # Zoek de afbeelding in de database
+    saved_image = SavedImage.query.filter_by(user_id=session['user_id'], id=image_id).first()
+    if not saved_image:
+        flash("Image not found or you do not have permission to delete it.", "error")
+        return redirect(url_for("favorites"))
+
+    # Verwijder de afbeelding
+    try:
+        db.session.delete(saved_image)
+        db.session.commit()
+        flash("Image deleted successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting image: {e}")
+        flash("Error deleting image. Please try again.", "error")
+
+    return redirect(url_for("favorites"))
+
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)

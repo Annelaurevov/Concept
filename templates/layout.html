@@ -15,9 +15,22 @@
                 </a>
             </div>
             <nav class="navbar">
+                <div class="search-bar">
+                    <form method="GET" action="{{ url_for('index') }}">
+                        <input type="text" name="query" placeholder="Search for images" value="{{ request.args.get('query', '') }}">
+                        <select name="category">
+                            <option value="interior" {% if category == 'interior' %}selected{% endif %}>Interior</option>
+                            <option value="nature" {% if category == 'nature' %}selected{% endif %}>Nature</option>
+                            <option value="art" {% if category == 'art' %}selected{% endif %}>Art</option>
+                            <!-- Voeg meer categorieën toe -->
+                        </select>
+                        <button type="submit">Search</button>
+                    </form>
+                </div>
                 <ul class="nav-links">
                     <li><a href="{{ url_for('contact') }}">Contact</a></li>
                     <li><a href="{{ url_for('about') }}">About Us</a></li>
+                    <li><a href="{{ url_for('favorites') }}">Favorites</a></li>
                     {% if not session.get("user_id") %}
                         <li><a href="{{ url_for('login') }}">Log In</a></li>
                         <li><a href="{{ url_for('register') }}">Register</a></li>
@@ -39,4 +52,6 @@
     {% endwith %}
     <main>
         {% block main %}{% endblock %}
- 
+    </main>
+</body>
+</html>
