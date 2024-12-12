@@ -1,11 +1,15 @@
 import os
 import requests
+import openai
 
 from flask import Flask, session, render_template, request, redirect, flash, url_for, jsonify
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from werkzeug.security import generate_password_hash, check_password_hash
+from scribble import generate_random_scribble, plot_scribble, generate_daily_scribble
+from datetime import datetime
+
 
 from models import *
 
@@ -22,16 +26,9 @@ db.init_app(app)
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+openai.api_key = "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"
 
 Session(app)
-
-CATEGORIES = {
-    "interior": "interior design",
-    "nature": "nature landscapes",
-    "art": "modern art",
-    "fashion": "fashion streetwear",
-    "travel": "travel destinations"
-}
 
 # Decorator to enforce login
 def login_required(f):
@@ -56,8 +53,8 @@ def index():
         "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
     }
     params = {
-        "query": f"{category} {query}",  # Zoekterm met categorie
-        "per_page": 9,  # Aantal resultaten per pagina
+        "query": f"{category} {query}", 
+        "per_page": 8, 
     }
     
     try:
@@ -223,6 +220,100 @@ def delete_image():
         flash("Error deleting image. Please try again.", "error")
 
     return redirect(url_for("favorites"))
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    user_message = data.get('message', '')
+
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # Gebruik "gpt-4" als je toegang hebt tot GPT-4
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": user_message},
+            ]
+        )
+        reply = response['choices'][0]['message']['content']
+        return jsonify({"reply": reply})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/doodles")
+def doodles():
+    today = datetime.now().date()
+    
+    # Verkrijg de doodles die vandaag zijn toegevoegd
+    todays_doodles = Doodle.query.filter_by(date=today).all()
+
+    if not todays_doodles:
+        # Geen doodles voor vandaag, dus maak een nieuwe aan
+        filename = generate_daily_scribble()  # Zorg ervoor dat deze functie een bestandsnaam retourneert
+        new_doodle = Doodle(filename=filename, date=today)
+        db.session.add(new_doodle)
+        db.session.commit()
+        todays_doodles = [new_doodle]  # Voeg de nieuw aangemaakte doodle toe aan de lijst
+
+    return render_template("doodles.html", todays_doodles=todays_doodles)
+
+@app.route("/upload_doodle", methods=["POST"])
+@login_required
+def upload_doodle():
+    file = request.files.get("uploaded_doodle")
+    if file:
+        filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+        filepath = os.path.join("static/user_doodles", filename)
+        file.save(filepath)
+
+        new_doodle = UserDoodle(
+            user_id=session["user_id"],
+            filename=filename,
+            likes=0
+        )
+        db.session.add(new_doodle)
+        db.session.commit()
+        flash("Je doodle is geüpload!", "success")
+    else:
+        flash("Geen bestand geselecteerd!", "error")
+    return redirect(url_for("doodles"))
+
+
+@app.route("/like/<int:doodle_id>", methods=["POST"])
+@login_required
+def like_doodle(doodle_id):
+    doodle = UserDoodle.query.get(doodle_id)
+    if doodle:
+        doodle.likes += 1
+        db.session.commit()
+        return jsonify({"likes": doodle.likes}), 200
+    return jsonify({"error": "Doodle niet gevonden"}), 404
+
+
+@app.route("/comment/<int:doodle_id>", methods=["POST"])
+@login_required
+def comment_doodle(doodle_id):
+    doodle = UserDoodle.query.get(doodle_id)
+    if doodle:
+        comment_text = request.form.get("comment")
+        new_comment = DoodleComment(
+            doodle_id=doodle_id,
+            user_id=session["user_id"],
+            text=comment_text
+        )
+        db.session.add(new_comment)
+        db.session.commit()
+        return jsonify({"message": "Comment toegevoegd!"}), 200
+    return jsonify({"error": "Doodle niet gevonden"}), 404
+
+
+@app.route("/leaderboard")
+def leaderboard():
+    top_doodles = UserDoodle.query.order_by(desc(UserDoodle.likes)).limit(10).all()
+    return render_template("leaderboard.html", user_doodles=top_doodles)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

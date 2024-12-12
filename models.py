@@ -31,3 +31,18 @@ class Favorite(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     url = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=True)
+
+class Doodle(db.Model):
+    __tablename__ = "doodles"
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String, nullable=False)
+    likes = db.Column(db.Integer, default=0)
+    date = db.Column(db.Date, nullable=False)
+
+class DoodleComment(db.Model):
+    __tablename__ = "doodle_comments"
+    id = db.Column(db.Integer, primary_key=True)
+    doodle_id = db.Column(db.Integer, db.ForeignKey("user_doodles.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    text = db.Column(db.String, nullable=False)
+

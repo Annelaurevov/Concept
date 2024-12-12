@@ -20,7 +20,7 @@
                         <input type="text" name="query" placeholder="Search for images" value="{{ request.args.get('query', '') }}">
                         <select name="category">
                             <option value="interior" {% if category == 'interior' %}selected{% endif %}>Interior</option>
-                            <option value="nature" {% if category == 'nature' %}selected{% endif %}>Nature</option>
+                            <option value="nature" {% if category == 'fashion' %}selected{% endif %}>fashion</option>
                             <option value="art" {% if category == 'art' %}selected{% endif %}>Art</option>
                             <!-- Voeg meer categorieën toe -->
                         </select>
