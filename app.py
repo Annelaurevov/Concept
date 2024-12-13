@@ -9,6 +9,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from werkzeug.security import generate_password_hash, check_password_hash
 from scribble import generate_random_scribble, plot_scribble, generate_daily_scribble
 from datetime import datetime
+from PIL import Image  
+from io import BytesIO
 
 
 from models import *
@@ -67,7 +69,7 @@ def index():
 
 @app.route('/recipes', methods=['GET'])
 def recipes():
-    query = request.args.get('query', 'chicken')  # Gebruik "chicken" als standaardzoekterm
+    query = request.args.get('query', 'pastries') 
     url = "https://api.edamam.com/search"
     params = {
         "q": query,
@@ -120,18 +122,18 @@ def photos():
 
     return render_template('photos.html', images=images, category=category)
 
-# Temporary storage for downloaded images
-TEMP_IMAGE_DIR = "static/temp_images"
-os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
-
-@app.route('/art')
+@app.route('/art', methods=['GET', 'POST'])
 def art():
-    api_url = "https://api.harvardartmuseums.org/object"
+    api_url = "https://www.rijksmuseum.nl/api/en/collection"
+    query = request.form.get('query', 'paintings')  # Haal de zoekterm op uit het formulier
+    page = request.args.get('page', 1)  # Voeg een pagina-parameter toe voor nieuwe resultaten
+
     params = {
-        "apikey": "f6677dc2-32bf-4f4a-91ec-52b3b820fb9d",
-        "classification": "Paintings",
-        "size": 10,  # Number of artworks to fetch
-        "sort": "random"
+        "key": "wKdQj5hU",  
+        "q": query,  
+        "ps": 20,  
+        "imgonly": True,  
+        "p": page  
     }
 
     artworks = []
@@ -140,30 +142,25 @@ def art():
         response.raise_for_status()
         data = response.json()
 
-        for artwork in data.get("records", []):
-            # Try to construct a IIIF-compatible image URL if iiifbaseuri is available
-            iiif_base = artwork.get("iiifbaseuri")
-            if iiif_base:
-                image_url = f"{iiif_base}/full/full/0/default.jpg"
-            else:
-                # Fallback to baseimageurl or primaryimageurl
-                image_url = artwork.get("primaryimageurl") or artwork.get("baseimageurl")
+        for item in data.get("artObjects", []):
+            title = item.get("title", "Untitled")
+            artist = item.get("principalOrFirstMaker", "Unknown")
+            image_url = item.get("webImage", {}).get("url", None)
+            info_url = item.get("links", {}).get("web", "#")
 
-            # Validate image URL and append height/width for resizing
-            if image_url:
-                resized_image_url = f"{image_url}?height=300&width=300"  # Resize to 300x300
-                artworks.append({
-                    "title": artwork.get("title", "Untitled"),
-                    "artist": artwork["people"][0]["name"] if artwork.get("people") else "Unknown",
-                    "period": artwork.get("century", "Unknown"),
-                    "image_url": resized_image_url,
-                    "info_url": artwork.get("url", "#")
-                })
+            if not image_url:
+                continue  # Sla over als er geen afbeelding is
 
+            artworks.append({
+                "title": title,
+                "artist": artist,
+                "image_url": image_url,
+                "info_url": info_url,
+            })
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching data from API: {e}")
+        print(f"Error fetching data from Rijksmuseum API: {e}")
 
-    return render_template('art.html', artworks=artworks)
+    return render_template('art.html', artworks=artworks, query=query, page=page)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -280,7 +277,7 @@ def save_image():
         print(f"Error saving image: {e}")
         flash("Error saving image. Please try again.", "error")
      
-    return render_template('save.html')
+    return redirect(url_for("favorites"))
 
 @app.route('/save_recipe', methods=["POST"])
 @login_required

@@ -472,37 +472,44 @@ body {
     color: #333;
 }
 
-/* Art Card Styling */
+.art-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
 .art-card {
-    background-color: white;
-    border-radius: 10px;
+    background: white;
+    border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     padding: 20px;
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    transition: transform 0.2s ease-in-out;
 }
 
-.art-card h2 {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: #333;
+.art-card:hover {
+    transform: translateY(-5px);
 }
 
-.art-card p {
-    font-size: 14px;
-    color: #666;
-    margin: 5px 0;
-}
-
-.art-image {
-    width: 100%;
+.art-card img {
+    max-width: 100%;
     height: auto;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    margin-bottom: 15px;
 }
+
+.art-card a {
+    text-decoration: none;
+    color: #3498db;
+    font-weight: bold;
+    transition: color 0.3s;
+}
+
+.art-card a:hover {
+    color: #1d6fa5;
+}
+
 
 .view-more {
     display: inline-block;

@@ -7,4 +7,4 @@ psycopg2-binary
 openai
 numpy scipy
 matplotlib
-
+pillow
