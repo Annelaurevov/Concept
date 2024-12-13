@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Fashion{% endblock %}
+{% block title %}Recipes{% endblock %}
 
 {% block main %}
 
@@ -25,10 +25,11 @@
         <div class="image-container">
             <h2>{{ recipe.title }}</h2>
             <img src="{{ recipe.image }}" alt="{{ recipe.title }}" class="recipe-image">
-            <form method="POST" action="{{ url_for('save_recipe') }}">
-                <input type="hidden" name="recipe_id" value="{{ loop.index }}">
+            <form method="POST" action="{{ url_for('save_item', item_type='recipe') }}">
+                <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
                 <input type="hidden" name="recipe_url" value="{{ recipe.url }}">
                 <input type="hidden" name="recipe_title" value="{{ recipe.title }}">
+                <input type="hidden" name="recipe_description" value="{{ recipe.description }}">
                 <button type="submit" class="heart-button">
                     ♥ 
                 </button>
@@ -40,6 +41,5 @@
         <p>Er zijn momenteel geen recepten beschikbaar. Probeer later opnieuw.</p>
     {% endif %}
 </div>
-
 
 {% endblock %}

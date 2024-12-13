@@ -66,10 +66,78 @@ def index():
 
     return render_template("index.html", images=images)
 
+@app.route("/photos", methods=["GET"])
+def photos():
+    category = request.args.get('category', 'interior')
+    query = request.args.get('query', '')
+
+    url = "https://api.unsplash.com/search/photos"
+    headers = {
+        "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
+    }
+    params = {
+        "query": f"{category} {query}",
+        "per_page": 20,
+    }
+
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        images = [
+            {
+                "id": i,
+                "url": img["urls"]["regular"],
+                "description": img.get("description", "No description available")
+            }
+            for i, img in enumerate(data["results"])
+        ]
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching images: {e}")
+        images = []
+
+    return render_template('photos.html', images=images, category=category)
+
+@app.route('/art', methods=['GET', 'POST'])
+def art():
+    api_url = "https://www.rijksmuseum.nl/api/en/collection"
+    query = request.form.get('query', 'paintings')
+    page = request.args.get('page', 1)
+
+    params = {
+        "key": "wKdQj5hU",
+        "q": query,
+        "ps": 20,
+        "imgonly": True,
+        "p": page
+    }
+
+    artworks = []
+    try:
+        response = requests.get(api_url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        for i, item in enumerate(data.get("artObjects", [])):
+            image_url = item.get("webImage", {}).get("url", None)
+            if not image_url:
+                continue
+
+            artworks.append({
+                "id": i,
+                "title": item.get("title", "Untitled"),
+                "artist": item.get("principalOrFirstMaker", "Unknown"),
+                "image_url": image_url,
+                "info_url": item.get("links", {}).get("web", "#")
+            })
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data from Rijksmuseum API: {e}")
+
+    return render_template('art.html', artworks=artworks, query=query, page=page)
 
 @app.route('/recipes', methods=['GET'])
 def recipes():
-    query = request.args.get('query', 'pastries') 
+    query = request.args.get('query', 'pastries')
     url = "https://api.edamam.com/search"
     params = {
         "q": query,
@@ -83,84 +151,20 @@ def recipes():
         data = response.json()
         recipes = [
             {
+                "id": i,
                 "title": hit["recipe"]["label"],
-                "image": hit["recipe"].get("image", ""),  # Controleer of de afbeelding aanwezig is
-                "url": hit["recipe"].get("url", ""),  # Controleer of de URL aanwezig is
+                "image": hit["recipe"].get("image", ""),
+                "url": hit["recipe"].get("url", ""),
+                "description": hit["recipe"].get("source", "No description available")
             }
-            for hit in data.get("hits", [])
+            for i, hit in enumerate(data.get("hits", []))
         ]
-       
     except requests.exceptions.RequestException as e:
         print(f"Error fetching recipes: {e}")
         recipes = []
 
     return render_template('recipes.html', recipes=recipes, query=query)
 
-@app.route("/photos")
-def photos():
-    category = request.args.get('category', 'interior')  # Default category
-    query = request.args.get('query', '')  # Search term
-    
-    # Unsplash API-instellingen
-    url = "https://api.unsplash.com/search/photos"
-    headers = {
-        "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
-    }
-    params = {
-        "query": f"{category} {query}", 
-        "per_page": 20, 
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()  # Controleer op fouten
-        data = response.json()
-        images = [{"url": img["urls"]["regular"]} for img in data["results"]]
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching images: {e}")
-        images = []
-
-    return render_template('photos.html', images=images, category=category)
-
-@app.route('/art', methods=['GET', 'POST'])
-def art():
-    api_url = "https://www.rijksmuseum.nl/api/en/collection"
-    query = request.form.get('query', 'paintings')  # Haal de zoekterm op uit het formulier
-    page = request.args.get('page', 1)  # Voeg een pagina-parameter toe voor nieuwe resultaten
-
-    params = {
-        "key": "wKdQj5hU",  
-        "q": query,  
-        "ps": 20,  
-        "imgonly": True,  
-        "p": page  
-    }
-
-    artworks = []
-    try:
-        response = requests.get(api_url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
-        for item in data.get("artObjects", []):
-            title = item.get("title", "Untitled")
-            artist = item.get("principalOrFirstMaker", "Unknown")
-            image_url = item.get("webImage", {}).get("url", None)
-            info_url = item.get("links", {}).get("web", "#")
-
-            if not image_url:
-                continue  # Sla over als er geen afbeelding is
-
-            artworks.append({
-                "title": title,
-                "artist": artist,
-                "image_url": image_url,
-                "info_url": info_url,
-            })
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data from Rijksmuseum API: {e}")
-
-    return render_template('art.html', artworks=artworks, query=query, page=page)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -238,189 +242,137 @@ def contact():
 @app.route('/about')
 def about():
     return render_template('about.html')
-
-
-@app.route('/save', methods=["POST"])
+@app.route('/save/<item_type>', methods=["POST"])
 @login_required
-def save_image():
-    image_id = request.form.get("image_id")
-    image_url = request.form.get("image_url")
-    description = request.form.get("description")
-
-    if not description:
-        description = "No description available"
-    
-    # Debugging logs
-    print(f"Received data: image_id={image_id}, image_url={image_url}, description={description}")
-    
-    if not image_id or not image_url:
-        return jsonify({"success": False, "message": "Missing image data"}), 400
-
-    # Controleer of de afbeelding al is opgeslagen
-    existing = SavedImage.query.filter_by(user_id=session['user_id'], image_id=image_id).first()
-    if existing:
-        return jsonify({"success": False, "message": "Image already saved"}), 409
-
-    # Opslaan in de database
-    new_saved_image = SavedImage(
-        user_id=session['user_id'],
-        image_id=image_id,
-        url=image_url,
-        description=description or "No description available"
-    )
-    try:
-        db.session.add(new_saved_image)
-        db.session.commit()
-        flash("Image saved successfully!", "success")
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error saving image: {e}")
-        flash("Error saving image. Please try again.", "error")
-     
-    return redirect(url_for("favorites"))
-
-@app.route('/save_recipe', methods=["POST"])
-@login_required
-def save_recipe():
-    recipe_id = request.form.get("recipe_id")
-    label = request.form.get("recipe_title")
-    url = request.form.get("recipe_url")
-    description = request.form.get("recipe_description", "No description available")
-
-    if not recipe_id or not url or not label:
-        return jsonify({"success": False, "message": "Missing recipe data"}), 400
-
-    # Controleer of het recept al is opgeslagen
-    existing = SavedRecipe.query.filter_by(user_id=session['user_id'], recipe_id=recipe_id).first()
-    if existing:
-        return jsonify({"success": False, "message": "Recipe already saved"}), 409
-
-    # Opslaan in de database
-    new_saved_recipe = SavedRecipe(
-        user_id=session['user_id'],
-        recipe_id=recipe_id,
-        label=label,
-        url=url,
-        description=description
-    )
-    try:
-        db.session.add(new_saved_recipe)
-        db.session.commit()
-        flash("Recipe saved successfully!", "success")
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error saving recipe: {e}")
-        flash("Error saving recipe. Please try again.", "error")
-
-    return redirect(url_for("favorites"))
-
-@app.route('/save_art', methods=["POST"])
-@login_required
-def save_art():
-    art_id = request.form.get("art_id")
-    title = request.form.get("title")
-    artist = request.form.get("artist", "Unknown")
-    info_url = request.form.get("info_url")
-
-    if not art_id or not title or not info_url:
-        return jsonify({"success": False, "message": "Missing artwork data"}), 400
-
-    # Controleer of het kunstwerk al is opgeslagen
-    existing = SavedArt.query.filter_by(user_id=session['user_id'], id=art_id).first()
-    if existing:
-        return jsonify({"success": False, "message": "Artwork already saved"}), 409
-
-    # Opslaan in de database
-    new_artwork = SavedArt(
-        user_id=session['user_id'],
-        title=title,
-        artist=artist,
-        info_url=info_url
-    )
-    try:
-        db.session.add(new_artwork)
-        db.session.commit()
-        flash("Artwork saved successfully!", "success")
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error saving artwork: {e}")
-        flash("Error saving artwork. Please try again.", "error")
-
-    return redirect(url_for("favorites"))
-
-
-@app.route('/favorites')
-@login_required
-def favorites():
+def save_item(item_type):
     user_id = session["user_id"]
+    data = request.form
 
-    # Haal opgeslagen foto's, recepten en kunst op
+    if item_type == "photo":
+        item_id = data.get("image_id")  # Should match the unique ID from the API
+        url = data.get("image_url")
+        description = data.get("description", "No description available")
+
+        if not item_id or not url:
+            return jsonify({"success": False, "message": "Missing photo data"}), 400
+
+        # Check if the photo is already saved
+        existing = SavedImage.query.filter_by(user_id=user_id, image_id=item_id).first()
+        if existing:
+            return jsonify({"success": False, "message": "Photo already saved"}), 409
+
+        # Save the new photo
+        new_item = SavedImage(user_id=user_id, image_id=item_id, url=url, description=description)
+        redirect_route = "favorites_photos"
+
+    elif item_type == "recipe":
+        item_id = data.get("recipe_id")
+        label = data.get("recipe_title")
+        url = data.get("recipe_url")
+        description = data.get("recipe_description", "No description available")
+
+        if not item_id or not url or not label:
+            return jsonify({"success": False, "message": "Missing recipe data"}), 400
+
+        existing = SavedRecipe.query.filter_by(user_id=user_id, recipe_id=item_id).first()
+        if existing:
+            return jsonify({"success": False, "message": "Recipe already saved"}), 409
+
+        new_item = SavedRecipe(user_id=user_id, recipe_id=item_id, label=label, url=url, description=description)
+        redirect_route = "favorites_recipes"
+
+    elif item_type == "art":
+        item_id = data.get("art_id")
+        title = data.get("title")
+        artist = data.get("artist", "Unknown")
+        url = data.get("info_url")
+
+        if not item_id or not title or not url:
+            return jsonify({"success": False, "message": "Missing art data"}), 400
+
+        existing = SavedArt.query.filter_by(user_id=user_id, id=item_id).first()
+        if existing:
+            return jsonify({"success": False, "message": "Artwork already saved"}), 409
+
+        new_item = SavedArt(user_id=user_id, title=title, artist=artist, info_url=url)
+        redirect_route = "favorites_art"
+
+    else:
+        return jsonify({"success": False, "message": "Invalid item type"}), 400
+
+    # Save the new item and redirect
+    try:
+        db.session.add(new_item)
+        db.session.commit()
+        flash(f"{item_type.capitalize()} saved successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving {item_type}: {e}")
+        flash(f"Error saving {item_type}. Please try again.", "error")
+
+    return redirect(url_for(redirect_route))
+
+@app.route('/delete/<item_type>', methods=["POST"])
+@login_required
+def delete_item(item_type):
+    user_id = session["user_id"]
+    item_id = request.form.get("item_id")
+
+    if not item_id:
+        flash(f"Missing {item_type} data. Cannot delete.", "error")
+        return redirect(url_for("favorites"))
+
+    if item_type == "photo":
+        item = SavedImage.query.filter_by(user_id=user_id, image_id=item_id).first()
+        redirect_route = "favorites_photos"
+    elif item_type == "recipe":
+        item = SavedRecipe.query.filter_by(user_id=user_id, recipe_id=item_id).first()
+        redirect_route = "favorites_recipes"
+    elif item_type == "art":
+        item = SavedArt.query.filter_by(user_id=user_id, id=item_id).first()
+        redirect_route = "favorites_art"
+    else:
+        flash(f"Invalid {item_type}. Cannot delete.", "error")
+        return redirect(url_for("favorites"))
+
+    if not item:
+        flash(f"{item_type.capitalize()} not found or you do not have permission to delete it.", "error")
+        return redirect(url_for(redirect_route))
+
+    try:
+        db.session.delete(item)
+        db.session.commit()
+        flash(f"{item_type.capitalize()} deleted successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting {item_type}: {e}")
+        flash(f"Error deleting {item_type}. Please try again.", "error")
+
+    return redirect(url_for(redirect_route))
+
+@app.route('/favorites_photos')
+@login_required
+def favorites_photos():
+    user_id = session["user_id"]
     saved_images = SavedImage.query.filter_by(user_id=user_id).all()
+    return render_template('favorites_photos.html', saved_images=saved_images)
+
+
+@app.route('/favorites_art')
+@login_required
+def favorites_art():
+    user_id = session["user_id"]
+    saved_artworks = SavedArt.query.filter_by(user_id=user_id).all()
+    return render_template('favorites_art.html', saved_artworks=saved_artworks)
+
+
+@app.route('/favorites_recipes')
+@login_required
+def favorites_recipes():
+    user_id = session["user_id"]
     saved_recipes = SavedRecipe.query.filter_by(user_id=user_id).all()
-    saved_artworks = SavedArt.query.filter_by(user_id=user_id).all()  # Nieuwe kunstcategorie
+    return render_template('favorites_recipes.html', saved_recipes=saved_recipes)
 
-    return render_template(
-        'favorites.html', 
-        saved_images=saved_images, 
-        saved_recipes=saved_recipes, 
-        saved_artworks=saved_artworks
-    )
-
-
-@app.route('/delete_recipe', methods=["POST"])
-@login_required
-def delete_recipe():
-    recipe_id = request.form.get("recipe_id")
-
-    if not recipe_id:
-        flash("Missing recipe data. Cannot delete.", "error")
-        return redirect(url_for("favorites"))
-
-    # Zoek het recept in de database
-    saved_recipe = SavedRecipe.query.filter_by(user_id=session['user_id'], id=recipe_id).first()
-    if not saved_recipe:
-        flash("Recipe not found or you do not have permission to delete it.", "error")
-        return redirect(url_for("favorites"))
-
-    # Verwijder het recept
-    try:
-        db.session.delete(saved_recipe)
-        db.session.commit()
-        flash("Recipe deleted successfully!", "success")
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error deleting recipe: {e}")
-        flash("Error deleting recipe. Please try again.", "error")
-
-    return redirect(url_for("favorites"))
-
-
-@app.route('/delete', methods=["POST"])
-@login_required
-def delete_image():
-    image_id = request.form.get("image_id")
-
-    if not image_id:
-        flash("Missing image data. Cannot delete.", "error")
-        return redirect(url_for("favorites"))
-
-    # Zoek de afbeelding in de database
-    saved_image = SavedImage.query.filter_by(user_id=session['user_id'], id=image_id).first()
-    if not saved_image:
-        flash("Image not found or you do not have permission to delete it.", "error")
-        return redirect(url_for("favorites"))
-
-    # Verwijder de afbeelding
-    try:
-        db.session.delete(saved_image)
-        db.session.commit()
-        flash("Image deleted successfully!", "success")
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error deleting image: {e}")
-        flash("Error deleting image. Please try again.", "error")
-
-    return redirect(url_for("favorites"))
 
 @app.route('/chat', methods=['POST'])
 def chat():

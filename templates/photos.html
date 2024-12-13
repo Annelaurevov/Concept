@@ -1,17 +1,17 @@
 {% extends "layout.html" %}
 
-{% block title %}Interior{% endblock %}
+{% block title %}Photos{% endblock %}
 
 {% block main %}
 
 <div class="search-bar">
-    <form method="GET" action="{{ url_for('index') }}">
+    <form method="GET" action="{{ url_for('photos') }}">
         <input type="text" name="query" placeholder="Search for images" value="{{ request.args.get('query', '') }}">
         <select name="category">
             <option value="interior" {% if category == 'interior' %}selected{% endif %}>Interior</option>
-            <option value="nature" {% if category == 'fashion' %}selected{% endif %}>fashion</option>
-            <option value="art" {% if category == 'art' %}selected{% endif %}>Art</option>
-            <!-- Voeg meer categorieën toe -->
+            <option value="nature" {% if category == 'nature' %}selected{% endif %}>Nature</option>
+            <option value="fashion" {% if category == 'fashion' %}selected{% endif %}>Fashion</option>
+            <!-- Add more categories as needed -->
         </select>
         <button type="submit">Search</button>
     </form>
@@ -21,15 +21,13 @@
     {% if images %}
         {% for image in images %}
         <div class="image-container">
-            <img src="{{ image.url }}" alt="Unsplash Image">
-            <form method="POST" action="{{ url_for('save_image') }}">
-                <input type="hidden" name="image_id" value="{{ loop.index }}">
+            <img src="{{ image.url }}" alt="Photo">
+            <form method="POST" action="{{ url_for('save_item', item_type='photo') }}">
+                <input type="hidden" name="image_id" value="{{ image.id }}">
                 <input type="hidden" name="image_url" value="{{ image.url }}">
-                <input type="hidden" name="description" value="{{ image.description or '' }}">
-                <button type="submit" class="heart-button">
-                    ♥
-                </button>
-            </form>            
+                <input type="hidden" name="description" value="{{ image.description or 'No description available' }}">
+                <button type="submit" class="heart-button">♥</button>
+            </form>
         </div>
         {% endfor %}
     {% else %}
