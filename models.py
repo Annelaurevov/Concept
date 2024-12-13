@@ -25,12 +25,22 @@ class SavedImage(db.Model):
     url = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=True)
 
-class Favorite(db.Model):
-    __tablename__ = "favorites"  # Optioneel, voor consistentie
+class SavedRecipe(db.Model):
+    __tablename__ = 'saved_recipes'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    url = db.Column(db.String, nullable=False)
-    description = db.Column(db.String, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)  # Verwijzing naar de `users` tabel
+    recipe_id = db.Column(db.String, nullable=False)  # Unieke ID van het recept
+    label = db.Column(db.String, nullable=False)  # Naam van het recept
+    url = db.Column(db.String, nullable=False)  # Link naar het recept
+    description = db.Column(db.String, nullable=True)  # Optionele beschrijving
+
+class SavedArt(db.Model):
+    __tablename__ = 'saved_art'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Correcte verwijzing naar `users`
+    title = db.Column(db.String(150), nullable=False)
+    artist = db.Column(db.String(100), nullable=True)
+    info_url = db.Column(db.String(200), nullable=False)
 
 class Doodle(db.Model):
     __tablename__ = "doodles"
@@ -42,7 +52,6 @@ class Doodle(db.Model):
 class DoodleComment(db.Model):
     __tablename__ = "doodle_comments"
     id = db.Column(db.Integer, primary_key=True)
-    doodle_id = db.Column(db.Integer, db.ForeignKey("user_doodles.id"), nullable=False)
+    doodle_id = db.Column(db.Integer, db.ForeignKey("doodles.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     text = db.Column(db.String, nullable=False)
-

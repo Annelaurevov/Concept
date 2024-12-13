@@ -14,19 +14,21 @@ from datetime import datetime
 from models import *
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = "key"
 
 # Check for environment variable
 if not os.getenv("DATABASE_URL"):
     raise RuntimeError("DATABASE_URL is not set")
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
-db.init_app(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/annelaurevanoverbeeke/Documents/Programeerproject2/Concept/instance/database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
-openai.api_key = "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"
+
+db.init_app(app)
 
 Session(app)
 
@@ -41,9 +43,59 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
 @app.route('/')
 def index():
+    url = "https://api.unsplash.com/search/photos"
+    headers = {
+        "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
+    }
+    params = {
+        "query": "nature", 
+        "per_page": 30
+    }
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        images = [{"url": img["urls"]["regular"]} for img in data["results"]]
+    except Exception as e:
+        print(f"Error: {e}")
+        images = []
+
+    return render_template("index.html", images=images)
+
+
+@app.route('/recipes', methods=['GET'])
+def recipes():
+    query = request.args.get('query', 'chicken')  # Gebruik "chicken" als standaardzoekterm
+    url = "https://api.edamam.com/search"
+    params = {
+        "q": query,
+        "app_id": "482eb6d9",
+        "app_key": "d8b388214cd3dd949a059e7967b004cc",
+        "to": 8
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        recipes = [
+            {
+                "title": hit["recipe"]["label"],
+                "image": hit["recipe"].get("image", ""),  # Controleer of de afbeelding aanwezig is
+                "url": hit["recipe"].get("url", ""),  # Controleer of de URL aanwezig is
+            }
+            for hit in data.get("hits", [])
+        ]
+       
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching recipes: {e}")
+        recipes = []
+
+    return render_template('recipes.html', recipes=recipes, query=query)
+
+@app.route("/photos")
+def photos():
     category = request.args.get('category', 'interior')  # Default category
     query = request.args.get('query', '')  # Search term
     
@@ -54,7 +106,7 @@ def index():
     }
     params = {
         "query": f"{category} {query}", 
-        "per_page": 8, 
+        "per_page": 20, 
     }
     
     try:
@@ -66,7 +118,52 @@ def index():
         print(f"Error fetching images: {e}")
         images = []
 
-    return render_template('index.html', images=images, category=category)
+    return render_template('photos.html', images=images, category=category)
+
+# Temporary storage for downloaded images
+TEMP_IMAGE_DIR = "static/temp_images"
+os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
+
+@app.route('/art')
+def art():
+    api_url = "https://api.harvardartmuseums.org/object"
+    params = {
+        "apikey": "f6677dc2-32bf-4f4a-91ec-52b3b820fb9d",
+        "classification": "Paintings",
+        "size": 10,  # Number of artworks to fetch
+        "sort": "random"
+    }
+
+    artworks = []
+    try:
+        response = requests.get(api_url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        for artwork in data.get("records", []):
+            # Try to construct a IIIF-compatible image URL if iiifbaseuri is available
+            iiif_base = artwork.get("iiifbaseuri")
+            if iiif_base:
+                image_url = f"{iiif_base}/full/full/0/default.jpg"
+            else:
+                # Fallback to baseimageurl or primaryimageurl
+                image_url = artwork.get("primaryimageurl") or artwork.get("baseimageurl")
+
+            # Validate image URL and append height/width for resizing
+            if image_url:
+                resized_image_url = f"{image_url}?height=300&width=300"  # Resize to 300x300
+                artworks.append({
+                    "title": artwork.get("title", "Untitled"),
+                    "artist": artwork["people"][0]["name"] if artwork.get("people") else "Unknown",
+                    "period": artwork.get("century", "Unknown"),
+                    "image_url": resized_image_url,
+                    "info_url": artwork.get("url", "#")
+                })
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data from API: {e}")
+
+    return render_template('art.html', artworks=artworks)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -183,16 +280,123 @@ def save_image():
         print(f"Error saving image: {e}")
         flash("Error saving image. Please try again.", "error")
      
+    return render_template('save.html')
+
+@app.route('/save_recipe', methods=["POST"])
+@login_required
+def save_recipe():
+    recipe_id = request.form.get("recipe_id")
+    label = request.form.get("recipe_title")
+    url = request.form.get("recipe_url")
+    description = request.form.get("recipe_description", "No description available")
+
+    if not recipe_id or not url or not label:
+        return jsonify({"success": False, "message": "Missing recipe data"}), 400
+
+    # Controleer of het recept al is opgeslagen
+    existing = SavedRecipe.query.filter_by(user_id=session['user_id'], recipe_id=recipe_id).first()
+    if existing:
+        return jsonify({"success": False, "message": "Recipe already saved"}), 409
+
+    # Opslaan in de database
+    new_saved_recipe = SavedRecipe(
+        user_id=session['user_id'],
+        recipe_id=recipe_id,
+        label=label,
+        url=url,
+        description=description
+    )
+    try:
+        db.session.add(new_saved_recipe)
+        db.session.commit()
+        flash("Recipe saved successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving recipe: {e}")
+        flash("Error saving recipe. Please try again.", "error")
+
     return redirect(url_for("favorites"))
-    
+
+@app.route('/save_art', methods=["POST"])
+@login_required
+def save_art():
+    art_id = request.form.get("art_id")
+    title = request.form.get("title")
+    artist = request.form.get("artist", "Unknown")
+    info_url = request.form.get("info_url")
+
+    if not art_id or not title or not info_url:
+        return jsonify({"success": False, "message": "Missing artwork data"}), 400
+
+    # Controleer of het kunstwerk al is opgeslagen
+    existing = SavedArt.query.filter_by(user_id=session['user_id'], id=art_id).first()
+    if existing:
+        return jsonify({"success": False, "message": "Artwork already saved"}), 409
+
+    # Opslaan in de database
+    new_artwork = SavedArt(
+        user_id=session['user_id'],
+        title=title,
+        artist=artist,
+        info_url=info_url
+    )
+    try:
+        db.session.add(new_artwork)
+        db.session.commit()
+        flash("Artwork saved successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving artwork: {e}")
+        flash("Error saving artwork. Please try again.", "error")
+
+    return redirect(url_for("favorites"))
+
 
 @app.route('/favorites')
 @login_required
 def favorites():
-    # Haal opgeslagen afbeeldingen van de gebruiker op
     user_id = session["user_id"]
+
+    # Haal opgeslagen foto's, recepten en kunst op
     saved_images = SavedImage.query.filter_by(user_id=user_id).all()
-    return render_template('favorites.html', saved_images=saved_images)
+    saved_recipes = SavedRecipe.query.filter_by(user_id=user_id).all()
+    saved_artworks = SavedArt.query.filter_by(user_id=user_id).all()  # Nieuwe kunstcategorie
+
+    return render_template(
+        'favorites.html', 
+        saved_images=saved_images, 
+        saved_recipes=saved_recipes, 
+        saved_artworks=saved_artworks
+    )
+
+
+@app.route('/delete_recipe', methods=["POST"])
+@login_required
+def delete_recipe():
+    recipe_id = request.form.get("recipe_id")
+
+    if not recipe_id:
+        flash("Missing recipe data. Cannot delete.", "error")
+        return redirect(url_for("favorites"))
+
+    # Zoek het recept in de database
+    saved_recipe = SavedRecipe.query.filter_by(user_id=session['user_id'], id=recipe_id).first()
+    if not saved_recipe:
+        flash("Recipe not found or you do not have permission to delete it.", "error")
+        return redirect(url_for("favorites"))
+
+    # Verwijder het recept
+    try:
+        db.session.delete(saved_recipe)
+        db.session.commit()
+        flash("Recipe deleted successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting recipe: {e}")
+        flash("Error deleting recipe. Please try again.", "error")
+
+    return redirect(url_for("favorites"))
+
 
 @app.route('/delete', methods=["POST"])
 @login_required
@@ -250,12 +454,11 @@ def doodles():
     todays_doodles = Doodle.query.filter_by(date=today).all()
 
     if not todays_doodles:
-        # Geen doodles voor vandaag, dus maak een nieuwe aan
-        filename = generate_daily_scribble()  # Zorg ervoor dat deze functie een bestandsnaam retourneert
+        filename = generate_daily_scribble() 
         new_doodle = Doodle(filename=filename, date=today)
         db.session.add(new_doodle)
         db.session.commit()
-        todays_doodles = [new_doodle]  # Voeg de nieuw aangemaakte doodle toe aan de lijst
+        todays_doodles = [new_doodle]  
 
     return render_template("doodles.html", todays_doodles=todays_doodles)
 
@@ -316,4 +519,5 @@ def leaderboard():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    with app.app_context():
+        app.run(debug=True)

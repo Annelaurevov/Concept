@@ -10,10 +10,10 @@
         <div class="doodle-list">
             {% for doodle in todays_doodles %}
             <div class="doodle-item">
-                <!-- Verander dit naar het volledige pad -->
-                <img src="/static/doodles/{{ doodle.filename }}" alt="Doodle {{ doodle.id }}" 
-                     onerror="this.onerror=null; this.src='/static/default-image.png';">
-                <a href="/static/doodles/{{ doodle.filename }}" download>Download</a>
+                <img 
+                    src="{{ url_for('static', filename='doodles/' + doodle.filename) }}" 
+                    alt="Doodle {{ doodle.id }}" >
+                <a href="{{ url_for('static', filename='doodles/' + doodle.filename) }}" download>Download</a>
             </div>
             {% endfor %}
         </div>
@@ -52,17 +52,4 @@
     </div>
 </div>
 
-<script>
-    document.querySelectorAll('.comment-toggle').forEach(button => {
-        button.addEventListener('click', () => {
-            const doodleId = button.dataset.doodleId;
-            const commentsSection = document.getElementById(comments-${doodleId});
-            if (commentsSection.style.display === "none") {
-                commentsSection.style.display = "block";
-            } else {
-                commentsSection.style.display = "none";
-            }
-        });
-    });
-</script>
 {% endblock %}

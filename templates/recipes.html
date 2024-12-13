@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block title %}Fashion{% endblock %}
+
+{% block main %}
+
+<div class="search-bar">
+    <form method="GET" action="{{ url_for('recipes') }}">
+        <input type="text" name="query" placeholder="Zoek naar recepten" value="{{ request.args.get('query', '') }}">
+        <select name="category">
+            <option value="" {% if category == '' %}selected{% endif %}>Alle diëten</option>
+            <option value="vegan" {% if category == 'vegan' %}selected{% endif %}>Vegan</option>
+            <option value="gluten free" {% if category == 'gluten free' %}selected{% endif %}>Glutenvrij</option>
+            <option value="vegetarian" {% if category == 'vegetarian' %}selected{% endif %}>Vegetarisch</option>
+            <option value="keto" {% if category == 'keto' %}selected{% endif %}>Keto</option>
+            <!-- Voeg meer dieetopties toe -->
+        </select>
+        <button type="submit">Zoeken</button>
+    </form>
+</div>
+
+<div class="image-gallery">
+    {% if recipes %}
+        {% for recipe in recipes %}
+        <div class="image-container">
+            <h2>{{ recipe.title }}</h2>
+            <img src="{{ recipe.image }}" alt="{{ recipe.title }}" class="recipe-image">
+            <form method="POST" action="{{ url_for('save_recipe') }}">
+                <input type="hidden" name="recipe_id" value="{{ loop.index }}">
+                <input type="hidden" name="recipe_url" value="{{ recipe.url }}">
+                <input type="hidden" name="recipe_title" value="{{ recipe.title }}">
+                <button type="submit" class="heart-button">
+                    ♥ 
+                </button>
+            </form>
+            <a href="{{ recipe.url }}" target="_blank" class="view-recipe">Bekijk recept</a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>Er zijn momenteel geen recepten beschikbaar. Probeer later opnieuw.</p>
+    {% endif %}
+</div>
+
+
+{% endblock %}

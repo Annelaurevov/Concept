@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block title %}Art{% endblock %}
+
+{% block main %}
+<div class="image-gallery">
+    <!-- Placeholder for Doodles -->
+    <div class="image-container">
+        <img src="{{ url_for('static', filename='image_doodle.png') }}" alt="Create a Doodle" class="art-image">
+        <div class="hover-overlay">
+            <a href="{{ url_for('doodles') }}" class="hover-link">Create a Doodle</a>
+        </div>
+    </div>
+
+    <!-- Dynamische kunstwerken -->
+    {% if artworks %}
+        {% for artwork in artworks %}
+        <div class="image-container">
+            <div class="art-card">
+                <h2>{{ artwork.title or "Geen titel beschikbaar" }}</h2>
+                <p><strong>Kunstenaar:</strong> {{ artwork.people[0].name if artwork.people else 'Onbekend' }}</p>
+                <p><strong>Datum:</strong> {{ artwork.century or "Niet beschikbaar" }}</p>
+                
+                {% if artwork.image_url %}
+                <img src="{{ artwork.image_url }}" alt="{{ artwork.title }}" class="art-image">
+                {% elif artwork.iiifbaseuri %}
+                <img src="{{ artwork.iiifbaseuri }}/full/full/0/default.jpg" alt="{{ artwork.title }}" class="art-image">
+                {% else %}
+                <p>Afbeelding niet beschikbaar.</p>
+                {% endif %}
+                
+                <a href="{{ artwork.url if artwork.url else '#' }}" target="_blank">Bekijk meer</a>
+
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>Geen kunstwerken beschikbaar op dit moment. Probeer later opnieuw.</p>
+    {% endif %}
+</div>
+{% endblock %}

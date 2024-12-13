@@ -3,24 +3,20 @@
 {% block title %}Home{% endblock %}
 
 {% block main %}
-
-<div class="image-gallery">
-    {% if images %}
+<div class="scrolling-container">
+    <div class="scrolling-grid">
+        {% for image in images %}
+        <div class="image-container-index">
+            <img src="{{ image.url }}" alt="Unsplash Image">
+        </div>
+        {% endfor %}
+        <!-- Dupliceer de afbeeldingen voor een oneindige loop -->
         {% for image in images %}
         <div class="image-container">
             <img src="{{ image.url }}" alt="Unsplash Image">
-            <form method="POST" action="{{ url_for('save_image') }}">
-                <input type="hidden" name="image_id" value="{{ loop.index }}">
-                <input type="hidden" name="image_url" value="{{ image.url }}">
-                <input type="hidden" name="description" value="{{ image.description or '' }}">
-                <button type="submit" class="heart-button">
-                    ♥
-                </button>
-            </form>            
         </div>
         {% endfor %}
-    {% else %}
-        <p>No images available at the moment. Please try again later.</p>
-    {% endif %}
+    </div>
 </div>
+
 {% endblock %}
