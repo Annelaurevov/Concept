@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Doodles of the Day{% endblock %}
+{% block title %}Doodles{% endblock %}
 
 {% block main %}
 <div class="doodles-container">
@@ -12,44 +12,55 @@
             <div class="doodle-item">
                 <img 
                     src="{{ url_for('static', filename='doodles/' + doodle.filename) }}" 
-                    alt="Doodle {{ doodle.id }}" >
+                    alt="Doodle {{ doodle.id }}">
                 <a href="{{ url_for('static', filename='doodles/' + doodle.filename) }}" download>Download</a>
             </div>
             {% endfor %}
         </div>
     </div>
-</div>
+
     <h2>Upload Your Doodle</h2>
     <form method="POST" action="{{ url_for('upload_doodle') }}" enctype="multipart/form-data">
         <input type="file" name="uploaded_doodle" accept="image/*" required>
         <button type="submit">Upload</button>
     </form>
 
-    <h2>User Submissions</h2>
-    <div class="user-doodles">
-        {% for user_doodle in user_doodles %}
-        <div class="user-doodle-item">
-            <img src="{{ url_for('static', filename='doodles/' + user_doodle.filename) }}" alt="User Doodle {{ user_doodle.id }}">
+    <h2>All Submissions</h2>
+    <div class="all-doodles">
+        {% for doodle in all_doodles %}
+        <div class="doodle-item">
+            <img 
+                src="{{ url_for('static', filename='doodles_user/' + doodle.filename) }}" 
+                alt="Doodle {{ doodle.id }}">
+            <p>Uploaded by: {{ doodle.user.username }}</p>
+
             <div class="doodle-actions">
-                <form method="POST" action="{{ url_for('like_doodle', doodle_id=user_doodle.id) }}">
-                    <button type="submit">Like ({{ user_doodle.likes }})</button>
+                <form method="POST" action="{{ url_for('like_doodle', doodle_id=doodle.id) }}">
+                    <button type="submit">Like ({{ doodle.likes }})</button>
                 </form>
-                <button class="comment-toggle" data-doodle-id="{{ user_doodle.id }}">Comment</button>
-            </div>
-            <div class="comments-section" id="comments-{{ user_doodle.id }}" style="display: none;">
-                <form method="POST" action="{{ url_for('comment_doodle', doodle_id=user_doodle.id) }}">
+                <form method="POST" action="{{ url_for('comment_doodle', doodle_id=doodle.id) }}">
                     <textarea name="comment" placeholder="Write a comment..." required></textarea>
-                    <button type="submit">Submit</button>
+                    <button type="submit">Comment</button>
                 </form>
-                <ul class="comments-list">
-                    {% for comment in user_doodle.comments %}
-                    <li>{{ comment.text }} - <strong>{{ comment.user.username }}</strong></li>
-                    {% endfor %}
-                </ul>
             </div>
+            <ul class="comments-list">
+                {% for comment in doodle.comments %}
+                <li>{{ comment.text }} - <strong>{{ comment.user.username }}</strong></li>
+                {% endfor %}
+            </ul>
         </div>
         {% endfor %}
     </div>
 </div>
 
+<h1>All Doodles by Day</h1>
+<ul>
+    {% for date in all_dates %}
+    <li>
+        <a href="{{ url_for('doodles_by_date', date=date[0]) }}">
+            {{ date[0] }}
+        </a>
+    </li>
+    {% endfor %}
+</ul>
 {% endblock %}

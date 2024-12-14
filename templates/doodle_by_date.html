@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+
+{% block main %}
+<h1>Doodles for {{ date }}</h1>
+
+<h2>Daily Doodle</h2>
+<div class="daily-doodles">
+    {% for doodle in doodles %}
+    <div class="doodle-item">
+        <img src="{{ url_for('static', filename='doodles/' + doodle.filename) }}" alt="Doodle {{ doodle.id }}">
+        <a href="{{ url_for('static', filename='doodles/' + doodle.filename) }}" download>Download</a>
+    </div>
+    {% endfor %}
+</div>
+
+<h2>Submissions</h2>
+<div class="all-submissions">
+    {% for submission in user_doodles %}
+    <div class="submission-item">
+        <img src="{{ url_for('static', filename='user_doodles/' + submission.filename) }}" alt="Submission {{ submission.id }}">
+        <a href="{{ url_for('static', filename='user_doodles/' + submission.filename) }}" download>Download</a>
+        <p>Likes: {{ submission.likes }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

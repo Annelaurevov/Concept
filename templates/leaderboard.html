@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block title %}Leaderboard{% endblock %}
+
+{% block main %}
+<h1>Top {{ item_type.capitalize() }}s</h1>
+<ul>
+    {% for item in items %}
+    <li>
+        <h3>{{ item.title or item.label }}</h3>
+        <p>Likes: {{ item.likes }}</p>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

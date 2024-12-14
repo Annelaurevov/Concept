@@ -1,4 +1,5 @@
 import os
+from flask_migrate import Migrate
 import requests
 import openai
 
@@ -14,7 +15,6 @@ from io import BytesIO
 
 
 from models import *
-
 app = Flask(__name__)
 app.secret_key = "key"
 
@@ -22,9 +22,10 @@ app.secret_key = "key"
 if not os.getenv("DATABASE_URL"):
     raise RuntimeError("DATABASE_URL is not set")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/annelaurevanoverbeeke/Documents/Programeerproject2/Concept/instance/database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///instance/Concept.db")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+migrate = Migrate(app, db)
 
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
@@ -242,6 +243,7 @@ def contact():
 @app.route('/about')
 def about():
     return render_template('about.html')
+
 @app.route('/save/<item_type>', methods=["POST"])
 @login_required
 def save_item(item_type):
@@ -263,6 +265,9 @@ def save_item(item_type):
 
         # Save the new photo
         new_item = SavedImage(user_id=user_id, image_id=item_id, url=url, description=description)
+
+        item_type.likes += 1
+
         redirect_route = "favorites_photos"
 
     elif item_type == "recipe":
@@ -408,29 +413,55 @@ def doodles():
         db.session.add(new_doodle)
         db.session.commit()
         todays_doodles = [new_doodle]  
+    
+    all_doodles = UserDoodle.query.all()
+    
+    return render_template("doodles.html", todays_doodles=todays_doodles, all_doodles=all_doodles)
 
-    return render_template("doodles.html", todays_doodles=todays_doodles)
 
 @app.route("/upload_doodle", methods=["POST"])
 @login_required
 def upload_doodle():
     file = request.files.get("uploaded_doodle")
     if file:
+        # Controleer of de map bestaat
+        upload_folder = "static/doodles_user"
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+
         filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
-        filepath = os.path.join("static/user_doodles", filename)
+        filepath = os.path.join(upload_folder, filename)
         file.save(filepath)
 
-        new_doodle = UserDoodle(
+        # Koppel aan de Doodle of the Day
+        today = datetime.now().date()
+        todays_doodle = Doodle.query.filter_by(date=today).first()
+        if not todays_doodle:
+            flash("Doodle of the Day bestaat niet. Probeer later opnieuw.", "error")
+            return redirect(url_for("doodles"))
+
+        new_submission = UserDoodle(
             user_id=session["user_id"],
+            doodle_id=todays_doodle.id,
             filename=filename,
             likes=0
         )
-        db.session.add(new_doodle)
+        db.session.add(new_submission)
         db.session.commit()
         flash("Je doodle is geüpload!", "success")
     else:
         flash("Geen bestand geselecteerd!", "error")
+
     return redirect(url_for("doodles"))
+
+
+
+@app.route("/doodles/<date>")
+def doodles_by_date(date):
+    # Haal alle doodles en submissions op voor de opgegeven datum
+    doodles = Doodle.query.filter_by(date=date).all()
+    user_doodles = UserDoodle.query.join(Doodle).filter(Doodle.date == date).all()
+    return render_template("doodles_by_date.html", date=date, doodles=doodles, user_doodles=user_doodles)
 
 
 @app.route("/like/<int:doodle_id>", methods=["POST"])
@@ -464,7 +495,7 @@ def comment_doodle(doodle_id):
 @app.route("/leaderboard")
 def leaderboard():
     top_doodles = UserDoodle.query.order_by(desc(UserDoodle.likes)).limit(10).all()
-    return render_template("leaderboard.html", user_doodles=top_doodles)
+    return render_template("leaderboard.html", doodles_user=top_doodles)
 
 
 if __name__ == "__main__":
