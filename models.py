@@ -45,7 +45,6 @@ class SavedImage(db.Model):
     description = db.Column(db.String, nullable=True)
     likes = db.Column(db.Integer, default=0)  # Likes column added
 
-
 class SavedArt(db.Model):
     __tablename__ = "saved_art"
     id = db.Column(db.Integer, primary_key=True)
@@ -53,8 +52,8 @@ class SavedArt(db.Model):
     title = db.Column(db.String, nullable=False)
     artist = db.Column(db.String, nullable=True)
     info_url = db.Column(db.String, nullable=False)
-    likes = db.Column(db.Integer, default=0)  # Likes column added
-
+    likes = db.Column(db.Integer, default=0) 
+    image_url = db.Column(db.String, nullable=True) 
 
 class SavedRecipe(db.Model):
     __tablename__ = "saved_recipes"
@@ -64,7 +63,8 @@ class SavedRecipe(db.Model):
     label = db.Column(db.String, nullable=False)
     url = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=True)
-    likes = db.Column(db.Integer, default=0)  # Likes column added
+    recipe_image = db.Column(db.String(10000), nullable=True)
+    likes = db.Column(db.Integer, default=0)  
 
 class Doodle(db.Model):
     __tablename__ = "doodles"
@@ -91,3 +91,10 @@ class DoodleComment(db.Model):
     doodle_id = db.Column(db.Integer, db.ForeignKey("doodles.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     text = db.Column(db.String, nullable=False)
+
+class Like(db.Model):
+    __tablename__ = 'likes'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    doodle_id = db.Column(db.Integer, db.ForeignKey('user_doodles.id'), nullable=False)
+    unique_constraint = db.UniqueConstraint('user_id', 'doodle_id', name='unique_user_like')

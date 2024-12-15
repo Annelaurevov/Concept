@@ -3,43 +3,39 @@
 {% block title %}Recipes{% endblock %}
 
 {% block main %}
-
 <div class="search-bar">
     <form method="GET" action="{{ url_for('recipes') }}">
-        <input type="text" name="query" placeholder="Zoek naar recepten" value="{{ request.args.get('query', '') }}">
+        <input type="text" name="query" placeholder="Search for recipes" value="{{ request.args.get('query', '') }}">
         <select name="category">
-            <option value="" {% if category == '' %}selected{% endif %}>Alle diëten</option>
+            <option value="all" {% if category == 'all' %}selected{% endif %}>All Diets</option>
             <option value="vegan" {% if category == 'vegan' %}selected{% endif %}>Vegan</option>
-            <option value="gluten free" {% if category == 'gluten free' %}selected{% endif %}>Glutenvrij</option>
-            <option value="vegetarian" {% if category == 'vegetarian' %}selected{% endif %}>Vegetarisch</option>
-            <option value="keto" {% if category == 'keto' %}selected{% endif %}>Keto</option>
-            <!-- Voeg meer dieetopties toe -->
+            <option value="vegetarian" {% if category == 'vegetarian' %}selected{% endif %}>Vegetarian</option>
+            <option value="gluten-free" {% if category == 'gluten-free' %}selected{% endif %}>Gluten-Free</option>
         </select>
-        <button type="submit">Zoeken</button>
+        <button type="submit">Search</button>
     </form>
 </div>
 
-<div class="image-gallery">
+<div class="art-gallery">
     {% if recipes %}
         {% for recipe in recipes %}
-        <div class="image-container">
-            <h2>{{ recipe.title }}</h2>
+        <div class="art-card">
             <img src="{{ recipe.image }}" alt="{{ recipe.title }}" class="recipe-image">
+            <h3>{{ recipe.title }}</h3>
+            <p>{{ recipe.description }}</p>
+            <a href="{{ recipe.url }}" target="_blank">View Recipe</a>
             <form method="POST" action="{{ url_for('save_item', item_type='recipe') }}">
                 <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
-                <input type="hidden" name="recipe_url" value="{{ recipe.url }}">
                 <input type="hidden" name="recipe_title" value="{{ recipe.title }}">
+                <input type="hidden" name="recipe_url" value="{{ recipe.url }}">
                 <input type="hidden" name="recipe_description" value="{{ recipe.description }}">
-                <button type="submit" class="heart-button">
-                    ♥ 
-                </button>
-            </form>
-            <a href="{{ recipe.url }}" target="_blank" class="view-recipe">Bekijk recept</a>
+                <input type="hidden" name="recipe_image" value="{{ recipe.image }}"> <!-- Zorg dat dit klopt -->
+                <button type="submit" class="heart-button">♥</button>
+            </form>            
         </div>
         {% endfor %}
     {% else %}
-        <p>Er zijn momenteel geen recepten beschikbaar. Probeer later opnieuw.</p>
+        <p>No recipes found. Please try another search term.</p>
     {% endif %}
 </div>
-
 {% endblock %}

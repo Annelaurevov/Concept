@@ -3,24 +3,38 @@
 {% block title %}Photos{% endblock %}
 
 {% block main %}
-
 <div class="search-bar">
     <form method="GET" action="{{ url_for('photos') }}">
         <input type="text" name="query" placeholder="Search for images" value="{{ request.args.get('query', '') }}">
         <select name="category">
+            <option value="all" {% if category == 'all' %}selected{% endif %}>All Categories</option>
             <option value="interior" {% if category == 'interior' %}selected{% endif %}>Interior</option>
             <option value="nature" {% if category == 'nature' %}selected{% endif %}>Nature</option>
             <option value="fashion" {% if category == 'fashion' %}selected{% endif %}>Fashion</option>
-            <!-- Add more categories as needed -->
+            <option value="technology" {% if category == 'technology' %}selected{% endif %}>Technology</option>
+            <option value="architecture" {% if category == 'architecture' %}selected{% endif %}>Architecture</option>
+            <option value="travel" {% if category == 'travel' %}selected{% endif %}>Travel</option>
+            <option value="wildlife" {% if category == 'wildlife' %}selected{% endif %}>Wildlife</option>
+            <option value="sports" {% if category == 'sports' %}selected{% endif %}>Sports</option>
+            <option value="art" {% if category == 'art' %}selected{% endif %}>Art</option>
+            <option value="vehicles" {% if category == 'vehicles' %}selected{% endif %}>Vehicles</option>
+            <option value="people" {% if category == 'people' %}selected{% endif %}>People</option>
+            <option value="abstract" {% if category == 'abstract' %}selected{% endif %}>Abstract</option>
+            <option value="animals" {% if category == 'animals' %}selected{% endif %}>Animals</option>
+            <option value="business" {% if category == 'business' %}selected{% endif %}>Business</option>
+            <option value="health" {% if category == 'health' %}selected{% endif %}>Health</option>
+            <option value="education" {% if category == 'education' %}selected{% endif %}>Education</option>
+            <option value="music" {% if category == 'music' %}selected{% endif %}>Music</option>
+            <option value="movies" {% if category == 'movies' %}selected{% endif %}>Movies</option>
         </select>
         <button type="submit">Search</button>
     </form>
 </div>
 
-<div class="image-gallery">
+<div class="art-gallery">
     {% if images %}
         {% for image in images %}
-        <div class="image-container">
+        <div class="art-card">
             <img src="{{ image.url }}" alt="Photo">
             <form method="POST" action="{{ url_for('save_item', item_type='photo') }}">
                 <input type="hidden" name="image_id" value="{{ image.id }}">
@@ -34,5 +48,4 @@
         <p>No images available at the moment. Please try again later.</p>
     {% endif %}
 </div>
-
 {% endblock %}

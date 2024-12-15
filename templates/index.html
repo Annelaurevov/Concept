@@ -3,20 +3,18 @@
 {% block title %}Home{% endblock %}
 
 {% block main %}
-<div class="scrolling-container">
-    <div class="scrolling-grid">
-        {% for image in images %}
-        <div class="image-container-index">
-            <img src="{{ image.url }}" alt="Unsplash Image">
-        </div>
-        {% endfor %}
-        <!-- Dupliceer de afbeeldingen voor een oneindige loop -->
-        {% for image in images %}
-        <div class="image-container">
-            <img src="{{ image.url }}" alt="Unsplash Image">
-        </div>
-        {% endfor %}
+<div class="scrolling-grid">
+    {% for image in images %}
+    <div class="image-container-index">
+        <img src="{{ image.url }}" alt="Unsplash Image">
     </div>
+    {% endfor %}
+    <!-- Dupliceer de afbeeldingen voor een oneindige loop -->
+    {% for image in images %}
+    <div class="image-container">
+        <img src="{{ image.url }}" alt="Unsplash Image">
+    </div>
+    {% endfor %}
 </div>
 
 {% endblock %}

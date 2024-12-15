@@ -3,24 +3,23 @@
 {% block title %}Favorites - Recipes{% endblock %}
 
 {% block main %}
-<div class="favorites">
-    <h1>Favorite Recipes</h1>
-    <div class="saved-recipes">
-        {% if saved_recipes %}
-            {% for recipe in saved_recipes %}
-            <div class="recipe-card">
-                <h3>{{ recipe.label }}</h3>
-                <p>{{ recipe.description }}</p>
-                <a href="{{ recipe.url }}" target="_blank">View Recipe</a>
-                <form method="POST" action="{{ url_for('delete_item', item_type='recipe') }}">
-                    <input type="hidden" name="item_id" value="{{ recipe.recipe_id }}">
-                    <button type="submit">Remove</button>
-                </form>
-            </div>
-            {% endfor %}
-        {% else %}
-            <p>No saved recipes yet.</p>
-        {% endif %}
-    </div>
+<div class="art-gallery">
+    {% if saved_recipes %}
+        {% for recipe in saved_recipes %}
+        <div class="art-card">
+            <img src="{{ recipe.recipe_image or 'https://via.placeholder.com/300' }}" alt="{{ recipe.label }}">
+            <p>{{ recipe.label }}</p>
+            <a href="{{ recipe.url }}" target="_blank">View Recipe</a>
+            <form method="POST" action="{{ url_for('delete_item', item_type='recipe') }}">
+                <input type="hidden" name="item_id" value="{{ recipe.recipe_id }}">
+                <button type="submit">Remove</button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>No saved recipes yet.</p>
+    {% endif %}
 </div>
 {% endblock %}
+
+

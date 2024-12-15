@@ -3,24 +3,25 @@
 {% block title %}Favorites - Artworks{% endblock %}
 
 {% block main %}
-<div class="favorites">
-    <h1>Favorite Artworks</h1>
-    <div class="saved-artworks">
-        {% if saved_artworks %}
-            {% for artwork in saved_artworks %}
-            <div class="art-card">
-                <img src="{{ artwork.info_url }}" alt="{{ artwork.title }}">
-                <h3>{{ artwork.title }}</h3>
-                <p><strong>Artist:</strong> {{ artwork.artist }}</p>
-                <form method="POST" action="{{ url_for('delete_item', item_type='art') }}">
-                    <input type="hidden" name="item_id" value="{{ artwork.id }}">
-                    <button type="submit">Remove</button>
-                </form>
-            </div>
-            {% endfor %}
-        {% else %}
-            <p>No saved artworks yet.</p>
-        {% endif %}
-    </div>
+<div class="art-gallery">
+    {% if saved_artworks %}
+        {% for artwork in saved_artworks %}
+        <div class="art-card">
+            <!-- Toon de afbeelding met een fallback -->
+            <img src="{{ artwork.image_url or 'https://via.placeholder.com/300' }}" 
+                 alt="{{ artwork.title }}" 
+                 onerror="this.src='https://via.placeholder.com/300';">
+            <h3>{{ artwork.title }}</h3>
+            <p><strong>Artist:</strong> {{ artwork.artist }}</p>
+            <a href="{{ artwork.info_url }}" target="_blank">More</a>
+            <form method="POST" action="{{ url_for('delete_item', item_type='art') }}">
+                <input type="hidden" name="item_id" value="{{ artwork.id }}">
+                <button type="submit">Remove</button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>No saved artworks yet.</p>
+    {% endif %}
 </div>
 {% endblock %}

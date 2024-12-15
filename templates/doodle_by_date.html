@@ -4,24 +4,40 @@
 {% block main %}
 <h1>Doodles for {{ date }}</h1>
 
-<h2>Daily Doodle</h2>
 <div class="daily-doodles">
-    {% for doodle in doodles %}
-    <div class="doodle-item">
-        <img src="{{ url_for('static', filename='doodles/' + doodle.filename) }}" alt="Doodle {{ doodle.id }}">
-        <a href="{{ url_for('static', filename='doodles/' + doodle.filename) }}" download>Download</a>
+    <h2>Doodles</h2>
+    <div class="doodle-list">
+        {% for doodle in doodles %}
+        <div class="doodle-item">
+            <img src="{{ url_for('static', filename='doodles/' + doodle.filename) }}" alt="Doodle">
+            <a href="{{ url_for('static', filename='doodles/' + doodle.filename) }}" download>Download</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<h2>Statistics</h2>
+<p><strong>Total Likes:</strong> {{ total_likes }}</p>
+
+<h3>Most Liked Doodle(s):</h3>
+<div class="art-gallery">
+    {% for doodle in most_liked_doodles %}
+    <div>
+        <img src="{{ url_for('static', filename='doodles_user/' + doodle.filename) }}" alt="Most Liked Doodle" style="max-width: 200px;">
+        <p><strong>Likes:</strong> {{ doodle.likes }}</p>
     </div>
     {% endfor %}
 </div>
 
 <h2>Submissions</h2>
-<div class="all-submissions">
-    {% for submission in user_doodles %}
-    <div class="submission-item">
-        <img src="{{ url_for('static', filename='user_doodles/' + submission.filename) }}" alt="Submission {{ submission.id }}">
-        <a href="{{ url_for('static', filename='user_doodles/' + submission.filename) }}" download>Download</a>
-        <p>Likes: {{ submission.likes }}</p>
+<div class="art-gallery">
+    {% for submission, like_count in submissions %}
+    <div class="art-card">
+        <img src="{{ url_for('static', filename='doodles_user/' + submission.filename) }}" alt="Submission">
+        <p>Uploaded by: {{ submission.user.username }}</p>
+        <p><strong>Likes:</strong> {{ like_count }}</p>
     </div>
     {% endfor %}
 </div>
+
 {% endblock %}

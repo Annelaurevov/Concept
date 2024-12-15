@@ -25,42 +25,68 @@
         <button type="submit">Upload</button>
     </form>
 
-    <h2>All Submissions</h2>
-    <div class="all-doodles">
-        {% for doodle in all_doodles %}
-        <div class="doodle-item">
-            <img 
-                src="{{ url_for('static', filename='doodles_user/' + doodle.filename) }}" 
-                alt="Doodle {{ doodle.id }}">
-            <p>Uploaded by: {{ doodle.user.username }}</p>
+    <h2>Submissions</h2>
+    <div class="stats">
+        <h2>Doodle Statistics</h2>
+        <p><strong>Total Doodles:</strong> {{ submissions | length }}</p>
+        <p><strong>Total Likes:</strong> {{ total_likes }}</p>
 
-            <div class="doodle-actions">
-                <form method="POST" action="{{ url_for('like_doodle', doodle_id=doodle.id) }}">
-                    <button type="submit">Like ({{ doodle.likes }})</button>
-                </form>
-                <form method="POST" action="{{ url_for('comment_doodle', doodle_id=doodle.id) }}">
-                    <textarea name="comment" placeholder="Write a comment..." required></textarea>
-                    <button type="submit">Comment</button>
-                </form>
+        <h3>Most Popular Doodle(s):</h3>
+        <div class="art-gallery">
+            {% for doodle in most_liked_doodles %}
+            <div class="doodle-item">
+                <!-- Juiste verwijzing naar de afbeelding van de doodle -->
+                <img src="{{ url_for('static', filename='doodles_user/' ~ doodle.doodle.filename) }}" 
+                     alt="Most Liked Doodle" style="max-width: 200px;">
+        
+                <!-- Downloadlink -->
+                <a href="{{ url_for('static', filename='doodles_user/' ~ doodle.doodle.filename) }}" download>
+                    Download
+                </a>
+        
+                <!-- Aantal likes -->
+                <p><strong>Likes:</strong> {{ doodle.like_count }}</p>
             </div>
-            <ul class="comments-list">
-                {% for comment in doodle.comments %}
-                <li>{{ comment.text }} - <strong>{{ comment.user.username }}</strong></li>
-                {% endfor %}
-            </ul>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-</div>
+        
+          
 
-<h1>All Doodles by Day</h1>
-<ul>
-    {% for date in all_dates %}
-    <li>
-        <a href="{{ url_for('doodles_by_date', date=date[0]) }}">
-            {{ date[0] }}
-        </a>
-    </li>
-    {% endfor %}
-</ul>
+
+        <h1>All submitted doodles</h1>
+        <div class="art-gallery">
+            {% for submission, like_count in submissions %}
+            <div class="art-card">
+                <img src="{{ url_for('static', filename='doodles_user/' + submission.filename) }}" alt="Submission">
+                <p>Uploaded by: {{ submission.user.username }}</p>
+                <p><strong>Likes:</strong> {{ like_count }}</p>
+                <form method="POST" action="{{ url_for('like_doodle', doodle_id=submission.id) }}">
+                    {% set liked = submission.id in user_likes %}
+                    <button type="submit" class="heart-button" style="color: {% if liked %}red{% else %}gray{% endif %};">
+                        ♥
+                    </button>
+                </form>        
+            </div>
+            {% endfor %}
+        </div>
+
+    <div class="date-selection-container">
+        <h1>Past doodles</h1>
+        <div class="dropdown-container">
+            <form method="GET" action="{{ url_for('doodles_by_date', date='') }}">
+                <label for="date-select" class="date-label">Choose a Date:</label>
+                <select id="date-select" name="date" onchange="window.location.href=this.value;">
+                    {% for date in all_dates %}
+                    <option value="{{ url_for('doodles_by_date', date=date[0]) }}"
+                        {% if date[0] == todays_doodles[0].date %}selected{% endif %}>
+                        {{ date[0] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>    
+
+
+</div>
 {% endblock %}

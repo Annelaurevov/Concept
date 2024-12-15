@@ -233,7 +233,7 @@ def login():
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("You have been logged out.", "info")
+    flash("You have been logged out.")
     return redirect(url_for("index"))
 
 @app.route('/contact')
@@ -251,71 +251,96 @@ def save_item(item_type):
     data = request.form
 
     if item_type == "photo":
-        item_id = data.get("image_id")  # Should match the unique ID from the API
-        url = data.get("image_url")
-        description = data.get("description", "No description available")
+        user_id = session.get("user_id")  # Haal de user_id uit de sessie
+        image_id = request.form.get("image_id")  # Zorg dat dit overeenkomt met je HTML formulier
+        url = request.form.get("image_url")
+        description = request.form.get("description", "No description available")
 
-        if not item_id or not url:
-            return jsonify({"success": False, "message": "Missing photo data"}), 400
+        if not image_id or not url:
+            flash("Missing image data.", "error")
+            return redirect(request.referrer)
 
-        # Check if the photo is already saved
-        existing = SavedImage.query.filter_by(user_id=user_id, image_id=item_id).first()
-        if existing:
-            return jsonify({"success": False, "message": "Photo already saved"}), 409
+        # Controleer of de afbeelding al geliket is
+        existing_like = SavedImage.query.filter_by(user_id=user_id, image_id=image_id).first()
+        if existing_like:
+            flash("You have already liked this image!", "warning")
+            return redirect(request.referrer)
 
-        # Save the new photo
-        new_item = SavedImage(user_id=user_id, image_id=item_id, url=url, description=description)
+        # Voeg een nieuwe like toe
+        new_like = SavedImage(
+            user_id=user_id,
+            image_id=image_id,
+            url=url,
+            description=description
+        )
 
-        item_type.likes += 1
+        db.session.add(new_like)
+        db.session.commit()
 
-        redirect_route = "favorites_photos"
+        flash("Image liked successfully!", "success")
+            
 
     elif item_type == "recipe":
         item_id = data.get("recipe_id")
         label = data.get("recipe_title")
         url = data.get("recipe_url")
         description = data.get("recipe_description", "No description available")
+        recipe_image = data.get("recipe_image")
+
+        print(f"Recipe Image Received: {recipe_image}")  # Debug: Controleer de input
 
         if not item_id or not url or not label:
             return jsonify({"success": False, "message": "Missing recipe data"}), 400
 
-        existing = SavedRecipe.query.filter_by(user_id=user_id, recipe_id=item_id).first()
+        existing = SavedRecipe.query.filter_by(user_id=user_id, id=item_id).first()
         if existing:
-            return jsonify({"success": False, "message": "Recipe already saved"}), 409
+            flash("Already liked the recipe")
+            return redirect(request.referrer)
 
-        new_item = SavedRecipe(user_id=user_id, recipe_id=item_id, label=label, url=url, description=description)
-        redirect_route = "favorites_recipes"
+        new_item = SavedRecipe(
+            user_id=user_id,
+            recipe_id=item_id,
+            label=label,
+            url=url,
+            description=description,
+            recipe_image=recipe_image
+        )
+        db.session.add(new_item)
+        db.session.commit()
+
+        flash("Recipe saved successfully!", "success")
+        
 
     elif item_type == "art":
         item_id = data.get("art_id")
         title = data.get("title")
         artist = data.get("artist", "Unknown")
         url = data.get("info_url")
+        image_url = data.get("image_url")
 
         if not item_id or not title or not url:
             return jsonify({"success": False, "message": "Missing art data"}), 400
 
         existing = SavedArt.query.filter_by(user_id=user_id, id=item_id).first()
         if existing:
-            return jsonify({"success": False, "message": "Artwork already saved"}), 409
+            flash("Already liked the artwork")
+            return redirect(request.referrer)
 
-        new_item = SavedArt(user_id=user_id, title=title, artist=artist, info_url=url)
-        redirect_route = "favorites_art"
+        new_item = SavedArt(
+            user_id=user_id,
+            id=item_id,
+            title=title,
+            artist=artist,
+            info_url=url,
+            image_url=image_url
+        )
+        new_item.likes = 1
 
-    else:
-        return jsonify({"success": False, "message": "Invalid item type"}), 400
-
-    # Save the new item and redirect
-    try:
         db.session.add(new_item)
         db.session.commit()
-        flash(f"{item_type.capitalize()} saved successfully!", "success")
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error saving {item_type}: {e}")
-        flash(f"Error saving {item_type}. Please try again.", "error")
-
-    return redirect(url_for(redirect_route))
+        flash("Artwork saved successfully!", "success")
+    
+    return redirect(request.referrer)
 
 @app.route('/delete/<item_type>', methods=["POST"])
 @login_required
@@ -368,14 +393,20 @@ def favorites_photos():
 def favorites_art():
     user_id = session["user_id"]
     saved_artworks = SavedArt.query.filter_by(user_id=user_id).all()
-    return render_template('favorites_art.html', saved_artworks=saved_artworks)
+    for artwork in saved_artworks:
+        print(f"Artwork ID: {artwork.id}, Title: {artwork.title}, URL: {artwork.info_url}")
 
+    print(saved_artworks)
+    return render_template('favorites_art.html', saved_artworks=saved_artworks)
 
 @app.route('/favorites_recipes')
 @login_required
 def favorites_recipes():
     user_id = session["user_id"]
     saved_recipes = SavedRecipe.query.filter_by(user_id=user_id).all()
+    print(saved_recipes)  # Debug: Check welke data wordt teruggegeven
+    for recipe in saved_recipes:
+        print(f"Recipe Image: {recipe.recipe_image}")  # Check de waarde van recipe_image
     return render_template('favorites_recipes.html', saved_recipes=saved_recipes)
 
 
@@ -399,24 +430,49 @@ def chat():
         return jsonify({"reply": reply})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
+from sqlalchemy.sql import func
+
 @app.route("/doodles")
+@login_required
 def doodles():
     today = datetime.now().date()
-    
-    # Verkrijg de doodles die vandaag zijn toegevoegd
-    todays_doodles = Doodle.query.filter_by(date=today).all()
 
-    if not todays_doodles:
-        filename = generate_daily_scribble() 
-        new_doodle = Doodle(filename=filename, date=today)
-        db.session.add(new_doodle)
-        db.session.commit()
-        todays_doodles = [new_doodle]  
-    
-    all_doodles = UserDoodle.query.all()
-    
-    return render_template("doodles.html", todays_doodles=todays_doodles, all_doodles=all_doodles)
+    # Haal doodles van vandaag op
+    todays_doodles = Doodle.query.filter(Doodle.date == today).all()
+
+    # Bereken likes per submission met JOIN en GROUP BY
+    submissions = (
+        db.session.query(UserDoodle, func.count(Like.id).label("like_count"))
+        .join(Doodle, Doodle.id == UserDoodle.doodle_id)
+        .outerjoin(Like, Like.doodle_id == UserDoodle.id)
+        .filter(Doodle.date == today)
+        .group_by(UserDoodle.id)
+        .all()
+    )
+
+    # Totaal aantal likes van vandaag
+    total_likes = sum(like_count for _, like_count in submissions)
+
+    # Bereken meest gelikete doodle(s)
+    max_likes = max((like_count for _, like_count in submissions), default=0)
+    most_liked_doodles = [
+        {"doodle": submission, "like_count": like_count}
+        for submission, like_count in submissions
+        if like_count == max_likes
+    ]
+
+    # Haal alle likes van de huidige gebruiker op
+    user_likes = {like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()}
+
+    return render_template(
+        "doodles.html",
+        todays_doodles=todays_doodles,
+        submissions=submissions,
+        total_likes=total_likes,
+        most_liked_doodles=most_liked_doodles,
+        user_likes=user_likes
+    )
 
 
 @app.route("/upload_doodle", methods=["POST"])
@@ -454,48 +510,99 @@ def upload_doodle():
 
     return redirect(url_for("doodles"))
 
-
-
-@app.route("/doodles/<date>")
-def doodles_by_date(date):
-    # Haal alle doodles en submissions op voor de opgegeven datum
-    doodles = Doodle.query.filter_by(date=date).all()
-    user_doodles = UserDoodle.query.join(Doodle).filter(Doodle.date == date).all()
-    return render_template("doodles_by_date.html", date=date, doodles=doodles, user_doodles=user_doodles)
-
-
-@app.route("/like/<int:doodle_id>", methods=["POST"])
+@app.route('/like_doodle/<int:doodle_id>', methods=["POST"])
 @login_required
 def like_doodle(doodle_id):
-    doodle = UserDoodle.query.get(doodle_id)
-    if doodle:
-        doodle.likes += 1
-        db.session.commit()
-        return jsonify({"likes": doodle.likes}), 200
-    return jsonify({"error": "Doodle niet gevonden"}), 404
+    user_id = session['user_id']
+    
+    # Controleer of de gebruiker al een like heeft gegeven
+    existing_like = Like.query.filter_by(user_id=user_id, doodle_id=doodle_id).first()
+    
+    if existing_like:
+        # Verwijder de like (unlike)
+        db.session.delete(existing_like)
+        flash("Like removed!", "success")
+    else:
+        # Voeg een nieuwe like toe
+        new_like = Like(user_id=user_id, doodle_id=doodle_id)
+        db.session.add(new_like)
+        flash("Doodle liked!", "success")
+    
+    db.session.commit()
+    return redirect(request.referrer)
 
+@app.route("/doodles_by_date/<date>")
+@login_required
+def doodles_by_date(date):
+    # Converteer de string naar een datumobject
+    try:
+        selected_date = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        flash("Invalid date format. Please use YYYY-MM-DD.", "error")
+        return redirect(url_for("doodles"))
+
+    # Haal doodles van de geselecteerde datum op
+    selected_doodles = (
+        Doodle.query
+        .filter(Doodle.date == selected_date)
+        .all()
+    )
+
+    # Bereken totaal aantal likes per doodle
+    submissions = (
+        db.session.query(UserDoodle, func.count(Like.id).label("like_count"))
+        .join(Doodle, Doodle.id == UserDoodle.doodle_id)
+        .outerjoin(Like, Like.doodle_id == UserDoodle.id)
+        .filter(Doodle.date == selected_date)  # Alleen doodles van de geselecteerde datum
+        .group_by(UserDoodle)
+        .all()
+    )
+
+    # Bereken totaal aantal likes voor de geselecteerde datum
+    total_likes = sum([like_count for _, like_count in submissions])
+
+    # Haal de meest gelikete doodle(s) van de geselecteerde datum op
+    max_likes = max([like_count for _, like_count in submissions], default=0)
+    most_liked_doodles = [submission for submission, like_count in submissions if like_count == max_likes]
+
+    # Haal alle unieke datums op voor de dropdown
+    all_dates = db.session.query(Doodle.date).distinct().order_by(Doodle.date.desc()).all()
+
+    # Haal alle likes van de huidige gebruiker op
+    user_likes = {like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()}
+
+    return render_template(
+        "doodles.html",
+        todays_doodles=selected_doodles,
+        submissions=submissions,
+        total_likes=total_likes,
+        most_liked_doodles=most_liked_doodles,
+        user_likes=user_likes,
+        all_dates=all_dates,
+    )
 
 @app.route("/comment/<int:doodle_id>", methods=["POST"])
 @login_required
 def comment_doodle(doodle_id):
     doodle = UserDoodle.query.get(doodle_id)
-    if doodle:
-        comment_text = request.form.get("comment")
-        new_comment = DoodleComment(
-            doodle_id=doodle_id,
-            user_id=session["user_id"],
-            text=comment_text
-        )
-        db.session.add(new_comment)
-        db.session.commit()
-        return jsonify({"message": "Comment toegevoegd!"}), 200
-    return jsonify({"error": "Doodle niet gevonden"}), 404
+    if not doodle:
+        return jsonify({"error": "Doodle niet gevonden"}), 404
 
+    comment_text = request.form.get("comment")
+    new_comment = DoodleComment(
+        doodle_id=doodle_id,
+        user_id=session["user_id"],
+        text=comment_text
+    )
+    db.session.add(new_comment)
+    db.session.commit()
+    return jsonify({"message": "Comment toegevoegd!"}), 200
 
 @app.route("/leaderboard")
 def leaderboard():
     top_doodles = UserDoodle.query.order_by(desc(UserDoodle.likes)).limit(10).all()
     return render_template("leaderboard.html", doodles_user=top_doodles)
+
 
 
 if __name__ == "__main__":
