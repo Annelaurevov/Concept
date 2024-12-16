@@ -432,17 +432,6 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/cleanup_default_doodles", endpoint="cleanup_doodles_unique")
-@login_required
-def cleanup_default_doodles():
-    # Zoek en verwijder 'default.png'
-    default_doodles = Doodle.query.filter(Doodle.filename == "test_doodle.png").all()
-    for doodle in default_doodles:
-        db.session.delete(doodle)
-    db.session.commit()
-    flash(f"Verwijderd {len(default_doodles)} doodle(s)", "success")
-    return redirect(url_for("doodles"))
-
 @app.route("/doodles")
 @login_required
 def doodles():
@@ -601,6 +590,32 @@ def doodles_by_date(date):
         user_likes={like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()},
         all_dates=all_dates
     )
+
+@app.route("/api/doodles/filter", methods=["GET"])
+def filter_doodles():
+    """
+    Filter doodles op datum via query parameters.
+    """
+    date = request.args.get("date")  # Bijvoorbeeld ?date=2024-12-16
+    if date:
+        doodles = Doodle.query.filter(Doodle.date == date).all()
+    else:
+        doodles = Doodle.query.all()
+
+    # Log de query-resultaten
+    print("Query-resultaten:")
+    for doodle in doodles:
+        print(f"ID: {doodle.id}, Filename: {doodle.filename}, Likes: {doodle.likes}, Date: {doodle.date}")
+
+    doodle_list = [{
+        "id": doodle.id,
+        "filename": doodle.filename,
+        "likes": doodle.likes,
+        "date": doodle.date.strftime('%Y-%m-%d')
+    } for doodle in doodles]
+
+    return jsonify({"status": "success", "data": doodle_list})
+
 
 if __name__ == "__main__":
     with app.app_context():
