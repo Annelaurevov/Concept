@@ -14,8 +14,6 @@ class User(db.Model):
     saved_images = db.relationship('SavedImage', backref='user', lazy=True)
     saved_art = db.relationship('SavedArt', backref='user', lazy=True)
     saved_recipes = db.relationship('SavedRecipe', backref='user', lazy=True)
-    comments = db.relationship('Comment', backref='user', lazy=True)
-    doodle_comments = db.relationship('DoodleComment', backref='user', lazy=True)
 
     def set_password(self, password):
         """Hash the password and save it using a compatible method."""
@@ -72,7 +70,6 @@ class Doodle(db.Model):
     filename = db.Column(db.String, nullable=False)
     likes = db.Column(db.Integer, default=0)
     date = db.Column(db.Date, nullable=False)
-    comments = db.relationship('DoodleComment', backref='doodle', lazy=True)
     submissions = db.relationship("UserDoodle", backref="doodle", lazy=True)
 
 class UserDoodle(db.Model):
@@ -85,16 +82,9 @@ class UserDoodle(db.Model):
 
     user = db.relationship('User', backref='user_doodles', lazy=True)
 
-class DoodleComment(db.Model):
-    __tablename__ = "doodle_comments"
-    id = db.Column(db.Integer, primary_key=True)
-    doodle_id = db.Column(db.Integer, db.ForeignKey("doodles.id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    text = db.Column(db.String, nullable=False)
-
 class Like(db.Model):
     __tablename__ = 'likes'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     doodle_id = db.Column(db.Integer, db.ForeignKey('user_doodles.id'), nullable=False)
-    unique_constraint = db.UniqueConstraint('user_id', 'doodle_id', name='unique_user_like')
+

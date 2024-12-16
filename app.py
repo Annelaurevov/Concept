@@ -13,17 +13,15 @@ from scribble import generate_random_scribble, plot_scribble, generate_daily_scr
 from datetime import datetime
 from PIL import Image  
 from io import BytesIO
-
+from dotenv import load_dotenv
+load_dotenv()
 
 from models import *
 app = Flask(__name__)
-app.secret_key = "key"
+app.secret_key = os.getenv("SECRET_KEY", "fallback_key")
 
-# Check for environment variable
-if not os.getenv("DATABASE_URL"):
-    raise RuntimeError("DATABASE_URL is not set")
-
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///instance/Concept.db")
+# Configureer de PostgreSQL-database
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://annelaurevanoverbeeke:<Nulu2911!>@localhost/concept"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 migrate = Migrate(app, db)
@@ -35,6 +33,8 @@ app.config["SESSION_TYPE"] = "filesystem"
 db.init_app(app)
 
 Session(app)
+
+API_KEY = "mijn-doodles"
 
 # Decorator to enforce login
 def login_required(f):
@@ -432,6 +432,16 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/cleanup_default_doodles", endpoint="cleanup_doodles_unique")
+@login_required
+def cleanup_default_doodles():
+    # Zoek en verwijder 'default.png'
+    default_doodles = Doodle.query.filter(Doodle.filename == "test_doodle.png").all()
+    for doodle in default_doodles:
+        db.session.delete(doodle)
+    db.session.commit()
+    flash(f"Verwijderd {len(default_doodles)} doodle(s)", "success")
+    return redirect(url_for("doodles"))
 
 @app.route("/doodles")
 @login_required
@@ -591,7 +601,6 @@ def doodles_by_date(date):
         user_likes={like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()},
         all_dates=all_dates
     )
-
 
 if __name__ == "__main__":
     with app.app_context():
