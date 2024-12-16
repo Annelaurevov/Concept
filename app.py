@@ -7,6 +7,7 @@ from flask import Flask, session, render_template, request, redirect, flash, url
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash, check_password_hash
 from scribble import generate_random_scribble, plot_scribble, generate_daily_scribble
 from datetime import datetime
@@ -431,7 +432,6 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-from sqlalchemy.sql import func
 
 @app.route("/doodles")
 @login_required
@@ -440,6 +440,15 @@ def doodles():
 
     # Haal doodles van vandaag op
     todays_doodles = Doodle.query.filter(Doodle.date == today).all()
+
+    if not todays_doodles:
+        # Geen doodle vandaag? Genereer een nieuwe
+        filename = generate_daily_scribble()
+        new_doodle = Doodle(filename=filename, date=today)
+        db.session.add(new_doodle)
+        db.session.commit()
+        todays_doodles = [new_doodle]
+
 
     # Bereken likes per submission met JOIN en GROUP BY
     submissions = (
@@ -465,15 +474,20 @@ def doodles():
     # Haal alle likes van de huidige gebruiker op
     user_likes = {like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()}
 
+    # Haal alle unieke datums op
+    all_dates = db.session.query(Doodle.date).distinct().order_by(Doodle.date.desc()).all()
+
+
     return render_template(
         "doodles.html",
+        today = today,
         todays_doodles=todays_doodles,
         submissions=submissions,
         total_likes=total_likes,
         most_liked_doodles=most_liked_doodles,
-        user_likes=user_likes
+        user_likes=user_likes,
+        all_dates=all_dates
     )
-
 
 @app.route("/upload_doodle", methods=["POST"])
 @login_required
@@ -534,7 +548,6 @@ def like_doodle(doodle_id):
 @app.route("/doodles_by_date/<date>")
 @login_required
 def doodles_by_date(date):
-    # Converteer de string naar een datumobject
     try:
         selected_date = datetime.strptime(date, "%Y-%m-%d").date()
     except ValueError:
@@ -542,67 +555,42 @@ def doodles_by_date(date):
         return redirect(url_for("doodles"))
 
     # Haal doodles van de geselecteerde datum op
-    selected_doodles = (
-        Doodle.query
-        .filter(Doodle.date == selected_date)
-        .all()
-    )
+    selected_doodles = Doodle.query.filter(Doodle.date == selected_date).all()
 
     # Bereken totaal aantal likes per doodle
     submissions = (
         db.session.query(UserDoodle, func.count(Like.id).label("like_count"))
         .join(Doodle, Doodle.id == UserDoodle.doodle_id)
         .outerjoin(Like, Like.doodle_id == UserDoodle.id)
-        .filter(Doodle.date == selected_date)  # Alleen doodles van de geselecteerde datum
-        .group_by(UserDoodle)
+        .filter(Doodle.date == selected_date)
+        .group_by(UserDoodle.id)
         .all()
     )
 
-    # Bereken totaal aantal likes voor de geselecteerde datum
+    # Bereken totaal aantal likes
     total_likes = sum([like_count for _, like_count in submissions])
 
-    # Haal de meest gelikete doodle(s) van de geselecteerde datum op
+    # Bereken de meest gelikete doodle(s)
     max_likes = max([like_count for _, like_count in submissions], default=0)
-    most_liked_doodles = [submission for submission, like_count in submissions if like_count == max_likes]
+    most_liked_doodles = [
+        {"doodle": submission, "like_count": like_count}
+        for submission, like_count in submissions
+        if like_count == max_likes
+    ]
 
-    # Haal alle unieke datums op voor de dropdown
+    # Haal alle unieke datums op
     all_dates = db.session.query(Doodle.date).distinct().order_by(Doodle.date.desc()).all()
-
-    # Haal alle likes van de huidige gebruiker op
-    user_likes = {like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()}
 
     return render_template(
         "doodles.html",
+        today=selected_date,
         todays_doodles=selected_doodles,
         submissions=submissions,
         total_likes=total_likes,
         most_liked_doodles=most_liked_doodles,
-        user_likes=user_likes,
-        all_dates=all_dates,
+        user_likes={like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()},
+        all_dates=all_dates
     )
-
-@app.route("/comment/<int:doodle_id>", methods=["POST"])
-@login_required
-def comment_doodle(doodle_id):
-    doodle = UserDoodle.query.get(doodle_id)
-    if not doodle:
-        return jsonify({"error": "Doodle niet gevonden"}), 404
-
-    comment_text = request.form.get("comment")
-    new_comment = DoodleComment(
-        doodle_id=doodle_id,
-        user_id=session["user_id"],
-        text=comment_text
-    )
-    db.session.add(new_comment)
-    db.session.commit()
-    return jsonify({"message": "Comment toegevoegd!"}), 200
-
-@app.route("/leaderboard")
-def leaderboard():
-    top_doodles = UserDoodle.query.order_by(desc(UserDoodle.likes)).limit(10).all()
-    return render_template("leaderboard.html", doodles_user=top_doodles)
-
 
 
 if __name__ == "__main__":

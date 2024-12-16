@@ -4,9 +4,11 @@
 
 {% block main %}
 <div class="doodles-container">
-    <h1>Doodle of the Day</h1>
+    <!-- Titel aangepast aan de geselecteerde datum -->
+    <h1>Doodles for {{ today }}</h1>
+    
     <div class="daily-doodles">
-        <h2>Today's Doodles</h2>
+        <h2>Doodles</h2>
         <div class="doodle-list">
             {% for doodle in todays_doodles %}
             <div class="doodle-item">
@@ -15,6 +17,8 @@
                     alt="Doodle {{ doodle.id }}">
                 <a href="{{ url_for('static', filename='doodles/' + doodle.filename) }}" download>Download</a>
             </div>
+            {% else %}
+            <p>No doodles available for this date.</p>
             {% endfor %}
         </div>
     </div>
@@ -25,68 +29,59 @@
         <button type="submit">Upload</button>
     </form>
 
-    <h2>Submissions</h2>
-    <div class="stats">
-        <h2>Doodle Statistics</h2>
-        <p><strong>Total Doodles:</strong> {{ submissions | length }}</p>
-        <p><strong>Total Likes:</strong> {{ total_likes }}</p>
+    <h2>Doodle Statistics</h2>
+    <p><strong>Total Doodles:</strong> {{ submissions | length }}</p>
+    <p><strong>Total Likes:</strong> {{ total_likes }}</p>
 
-        <h3>Most Popular Doodle(s):</h3>
-        <div class="art-gallery">
-            {% for doodle in most_liked_doodles %}
-            <div class="doodle-item">
-                <!-- Juiste verwijzing naar de afbeelding van de doodle -->
-                <img src="{{ url_for('static', filename='doodles_user/' ~ doodle.doodle.filename) }}" 
-                     alt="Most Liked Doodle" style="max-width: 200px;">
-        
-                <!-- Downloadlink -->
-                <a href="{{ url_for('static', filename='doodles_user/' ~ doodle.doodle.filename) }}" download>
-                    Download
-                </a>
-        
-                <!-- Aantal likes -->
-                <p><strong>Likes:</strong> {{ doodle.like_count }}</p>
-            </div>
-            {% endfor %}
+    <h3>Most Popular Doodle(s):</h3>
+    <div class="art-gallery">
+        {% for doodle in most_liked_doodles %}
+        <div class="doodle-item">
+            <img src="{{ url_for('static', filename='doodles_user/' + doodle.doodle.filename) }}" 
+                 alt="Most Liked Doodle" style="max-width: 200px;">
+            <a href="{{ url_for('static', filename='doodles_user/' + doodle.doodle.filename) }}" download>
+                Download
+            </a>
+            <p><strong>Likes:</strong> {{ doodle.like_count }}</p>
         </div>
-        
-          
+        {% else %}
+        <p>No popular doodles for this date.</p>
+        {% endfor %}
+    </div>
 
-
-        <h1>All submitted doodles</h1>
-        <div class="art-gallery">
-            {% for submission, like_count in submissions %}
-            <div class="art-card">
-                <img src="{{ url_for('static', filename='doodles_user/' + submission.filename) }}" alt="Submission">
-                <p>Uploaded by: {{ submission.user.username }}</p>
-                <p><strong>Likes:</strong> {{ like_count }}</p>
-                <form method="POST" action="{{ url_for('like_doodle', doodle_id=submission.id) }}">
-                    {% set liked = submission.id in user_likes %}
-                    <button type="submit" class="heart-button" style="color: {% if liked %}red{% else %}gray{% endif %};">
-                        ♥
-                    </button>
-                </form>        
-            </div>
-            {% endfor %}
+    <h3>All Submitted Doodles</h3>
+    <div class="art-gallery">
+        {% for submission, like_count in submissions %}
+        <div class="art-card">
+            <img src="{{ url_for('static', filename='doodles_user/' + submission.filename) }}" alt="Submission">
+            <p>Uploaded by: {{ submission.user.username }}</p>
+            <p><strong>Likes:</strong> {{ like_count }}</p>
+            <form method="POST" action="{{ url_for('like_doodle', doodle_id=submission.id) }}">
+                {% set liked = submission.id in user_likes %}
+                <button type="submit" class="heart-button" style="color: {% if liked %}red{% else %}gray{% endif %};">
+                    ♥
+                </button>
+            </form>        
         </div>
+        {% else %}
+        <p>No submissions available.</p>
+        {% endfor %}
+    </div>
 
     <div class="date-selection-container">
-        <h1>Past doodles</h1>
-        <div class="dropdown-container">
-            <form method="GET" action="{{ url_for('doodles_by_date', date='') }}">
-                <label for="date-select" class="date-label">Choose a Date:</label>
-                <select id="date-select" name="date" onchange="window.location.href=this.value;">
-                    {% for date in all_dates %}
-                    <option value="{{ url_for('doodles_by_date', date=date[0]) }}"
-                        {% if date[0] == todays_doodles[0].date %}selected{% endif %}>
-                        {{ date[0] }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </form>
-        </div>
-    </div>    
-
-
+        <h3>Past Doodles</h3>
+        <form method="GET">
+            <label for="date-select">Choose a Date:</label>
+            <select id="date-select" name="date" onchange="window.location.href=this.value;">
+                {% for date in all_dates %}
+                <option value="{{ url_for('doodles_by_date', date=date[0]) }}"
+                        {% if date[0] == today %}selected{% endif %}>
+                    {{ date[0] }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    
 </div>
 {% endblock %}
