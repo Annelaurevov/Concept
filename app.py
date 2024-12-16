@@ -20,13 +20,11 @@ from models import *
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback_key")
 
-# Configureer de PostgreSQL-database
 app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://annelaurevanoverbeeke:<Nulu2911!>@localhost/concept"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 migrate = Migrate(app, db)
 
-# Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 
@@ -36,7 +34,6 @@ Session(app)
 
 API_KEY = "mijn-doodles"
 
-# Decorator to enforce login
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -49,24 +46,29 @@ def login_required(f):
 
 @app.route('/')
 def index():
-    url = "https://api.unsplash.com/search/photos"
+    url = "https://api.unsplash.com/photos/random"  
     headers = {
         "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
     }
     params = {
-        "query": "nature", 
-        "per_page": 30
+        "count": 40,  
+        "query": "art" 
     }
     try:
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
-        images = [{"url": img["urls"]["regular"]} for img in data["results"]]
+
+        images = []
+        for img in data:
+            if "urls" in img and "regular" in img["urls"]:
+                images.append({"url": img["urls"]["regular"]})
     except Exception as e:
         print(f"Error: {e}")
         images = []
 
     return render_template("index.html", images=images)
+
 
 @app.route("/photos", methods=["GET"])
 def photos():
@@ -252,8 +254,8 @@ def save_item(item_type):
     data = request.form
 
     if item_type == "photo":
-        user_id = session.get("user_id")  # Haal de user_id uit de sessie
-        image_id = request.form.get("image_id")  # Zorg dat dit overeenkomt met je HTML formulier
+        user_id = session.get("user_id")  
+        image_id = request.form.get("image_id")  
         url = request.form.get("image_url")
         description = request.form.get("description", "No description available")
 
@@ -261,13 +263,11 @@ def save_item(item_type):
             flash("Missing image data.", "error")
             return redirect(request.referrer)
 
-        # Controleer of de afbeelding al geliket is
         existing_like = SavedImage.query.filter_by(user_id=user_id, image_id=image_id).first()
         if existing_like:
             flash("You have already liked this image!", "warning")
             return redirect(request.referrer)
 
-        # Voeg een nieuwe like toe
         new_like = SavedImage(
             user_id=user_id,
             image_id=image_id,
@@ -287,8 +287,6 @@ def save_item(item_type):
         url = data.get("recipe_url")
         description = data.get("recipe_description", "No description available")
         recipe_image = data.get("recipe_image")
-
-        print(f"Recipe Image Received: {recipe_image}")  # Debug: Controleer de input
 
         if not item_id or not url or not label:
             return jsonify({"success": False, "message": "Missing recipe data"}), 400
@@ -394,10 +392,6 @@ def favorites_photos():
 def favorites_art():
     user_id = session["user_id"]
     saved_artworks = SavedArt.query.filter_by(user_id=user_id).all()
-    for artwork in saved_artworks:
-        print(f"Artwork ID: {artwork.id}, Title: {artwork.title}, URL: {artwork.info_url}")
-
-    print(saved_artworks)
     return render_template('favorites_art.html', saved_artworks=saved_artworks)
 
 @app.route('/favorites_recipes')
@@ -405,9 +399,6 @@ def favorites_art():
 def favorites_recipes():
     user_id = session["user_id"]
     saved_recipes = SavedRecipe.query.filter_by(user_id=user_id).all()
-    print(saved_recipes)  # Debug: Check welke data wordt teruggegeven
-    for recipe in saved_recipes:
-        print(f"Recipe Image: {recipe.recipe_image}")  # Check de waarde van recipe_image
     return render_template('favorites_recipes.html', saved_recipes=saved_recipes)
 
 
@@ -437,19 +428,15 @@ def chat():
 def doodles():
     today = datetime.now().date()
 
-    # Haal doodles van vandaag op
     todays_doodles = Doodle.query.filter(Doodle.date == today).all()
 
     if not todays_doodles:
-        # Geen doodle vandaag? Genereer een nieuwe
         filename = generate_daily_scribble()
         new_doodle = Doodle(filename=filename, date=today)
         db.session.add(new_doodle)
         db.session.commit()
         todays_doodles = [new_doodle]
 
-
-    # Bereken likes per submission met JOIN en GROUP BY
     submissions = (
         db.session.query(UserDoodle, func.count(Like.id).label("like_count"))
         .join(Doodle, Doodle.id == UserDoodle.doodle_id)
@@ -459,10 +446,8 @@ def doodles():
         .all()
     )
 
-    # Totaal aantal likes van vandaag
     total_likes = sum(like_count for _, like_count in submissions)
 
-    # Bereken meest gelikete doodle(s)
     max_likes = max((like_count for _, like_count in submissions), default=0)
     most_liked_doodles = [
         {"doodle": submission, "like_count": like_count}
@@ -470,10 +455,8 @@ def doodles():
         if like_count == max_likes
     ]
 
-    # Haal alle likes van de huidige gebruiker op
     user_likes = {like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()}
 
-    # Haal alle unieke datums op
     all_dates = db.session.query(Doodle.date).distinct().order_by(Doodle.date.desc()).all()
 
 
@@ -493,7 +476,6 @@ def doodles():
 def upload_doodle():
     file = request.files.get("uploaded_doodle")
     if file:
-        # Controleer of de map bestaat
         upload_folder = "static/doodles_user"
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
@@ -502,7 +484,6 @@ def upload_doodle():
         filepath = os.path.join(upload_folder, filename)
         file.save(filepath)
 
-        # Koppel aan de Doodle of the Day
         today = datetime.now().date()
         todays_doodle = Doodle.query.filter_by(date=today).first()
         if not todays_doodle:
@@ -528,15 +509,12 @@ def upload_doodle():
 def like_doodle(doodle_id):
     user_id = session['user_id']
     
-    # Controleer of de gebruiker al een like heeft gegeven
     existing_like = Like.query.filter_by(user_id=user_id, doodle_id=doodle_id).first()
     
     if existing_like:
-        # Verwijder de like (unlike)
         db.session.delete(existing_like)
         flash("Like removed!", "success")
     else:
-        # Voeg een nieuwe like toe
         new_like = Like(user_id=user_id, doodle_id=doodle_id)
         db.session.add(new_like)
         flash("Doodle liked!", "success")
@@ -553,10 +531,8 @@ def doodles_by_date(date):
         flash("Invalid date format. Please use YYYY-MM-DD.", "error")
         return redirect(url_for("doodles"))
 
-    # Haal doodles van de geselecteerde datum op
     selected_doodles = Doodle.query.filter(Doodle.date == selected_date).all()
 
-    # Bereken totaal aantal likes per doodle
     submissions = (
         db.session.query(UserDoodle, func.count(Like.id).label("like_count"))
         .join(Doodle, Doodle.id == UserDoodle.doodle_id)
@@ -566,10 +542,8 @@ def doodles_by_date(date):
         .all()
     )
 
-    # Bereken totaal aantal likes
     total_likes = sum([like_count for _, like_count in submissions])
 
-    # Bereken de meest gelikete doodle(s)
     max_likes = max([like_count for _, like_count in submissions], default=0)
     most_liked_doodles = [
         {"doodle": submission, "like_count": like_count}
@@ -577,7 +551,6 @@ def doodles_by_date(date):
         if like_count == max_likes
     ]
 
-    # Haal alle unieke datums op
     all_dates = db.session.query(Doodle.date).distinct().order_by(Doodle.date.desc()).all()
 
     return render_template(
@@ -593,19 +566,11 @@ def doodles_by_date(date):
 
 @app.route("/api/doodles/filter", methods=["GET"])
 def filter_doodles():
-    """
-    Filter doodles op datum via query parameters.
-    """
-    date = request.args.get("date")  # Bijvoorbeeld ?date=2024-12-16
+    date = request.args.get("date")  
     if date:
         doodles = Doodle.query.filter(Doodle.date == date).all()
     else:
         doodles = Doodle.query.all()
-
-    # Log de query-resultaten
-    print("Query-resultaten:")
-    for doodle in doodles:
-        print(f"ID: {doodle.id}, Filename: {doodle.filename}, Likes: {doodle.likes}, Date: {doodle.date}")
 
     doodle_list = [{
         "id": doodle.id,

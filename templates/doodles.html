@@ -4,11 +4,9 @@
 
 {% block main %}
 <div class="doodles-container">
-    <!-- Titel aangepast aan de geselecteerde datum -->
     <h1>Doodles for {{ today }}</h1>
     
     <div class="daily-doodles">
-        <h2>Doodles</h2>
         <div class="doodle-list">
             {% for doodle in todays_doodles %}
             <div class="doodle-item">
