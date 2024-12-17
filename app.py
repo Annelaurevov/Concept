@@ -2,6 +2,7 @@ import os
 from flask_migrate import Migrate
 import requests
 import openai
+import hashlib
 
 from flask import Flask, session, render_template, request, redirect, flash, url_for, jsonify
 from flask_session import Session
@@ -20,7 +21,7 @@ from models import *
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback_key")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://annelaurevanoverbeeke:<Nulu2911!>@localhost/concept"
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://annelaurevanoverbeeke:<Nulu2911>@localhost/concept"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 migrate = Migrate(app, db)
@@ -43,6 +44,9 @@ def login_required(f):
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated_function
+# _______________________________________________________________________________________________________________________________#
+#                                                            HOMEPAGE                                                            #                                
+# _______________________________________________________________________________________________________________________________#
 
 @app.route('/')
 def index():
@@ -52,122 +56,22 @@ def index():
     }
     params = {
         "count": 40,  
-        "query": "art" 
+        "query": "christmas" 
     }
-    try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+    data = response.json()
 
-        images = []
-        for img in data:
-            if "urls" in img and "regular" in img["urls"]:
-                images.append({"url": img["urls"]["regular"]})
-    except Exception as e:
-        print(f"Error: {e}")
-        images = []
+    images = []
+    for img in data:
+        if "urls" in img and "regular" in img["urls"]:
+            images.append({"url": img["urls"]["regular"]})
 
     return render_template("index.html", images=images)
 
-
-@app.route("/photos", methods=["GET"])
-def photos():
-    category = request.args.get('category', 'interior')
-    query = request.args.get('query', '')
-
-    url = "https://api.unsplash.com/search/photos"
-    headers = {
-        "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
-    }
-    params = {
-        "query": f"{category} {query}",
-        "per_page": 20,
-    }
-
-    try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        images = [
-            {
-                "id": i,
-                "url": img["urls"]["regular"],
-                "description": img.get("description", "No description available")
-            }
-            for i, img in enumerate(data["results"])
-        ]
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching images: {e}")
-        images = []
-
-    return render_template('photos.html', images=images, category=category)
-
-@app.route('/art', methods=['GET', 'POST'])
-def art():
-    api_url = "https://www.rijksmuseum.nl/api/en/collection"
-    query = request.form.get('query', 'paintings')
-    page = request.args.get('page', 1)
-
-    params = {
-        "key": "wKdQj5hU",
-        "q": query,
-        "ps": 20,
-        "imgonly": True,
-        "p": page
-    }
-
-    artworks = []
-    try:
-        response = requests.get(api_url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
-        for i, item in enumerate(data.get("artObjects", [])):
-            image_url = item.get("webImage", {}).get("url", None)
-            if not image_url:
-                continue
-
-            artworks.append({
-                "id": i,
-                "title": item.get("title", "Untitled"),
-                "artist": item.get("principalOrFirstMaker", "Unknown"),
-                "image_url": image_url,
-                "info_url": item.get("links", {}).get("web", "#")
-            })
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data from Rijksmuseum API: {e}")
-
-    return render_template('art.html', artworks=artworks, query=query, page=page)
-
-@app.route('/recipes', methods=['GET'])
-def recipes():
-    query = request.args.get('query', 'pastries')
-    url = "https://api.edamam.com/search"
-    params = {
-        "q": query,
-        "app_id": "482eb6d9",
-        "app_key": "d8b388214cd3dd949a059e7967b004cc",
-        "to": 8
-    }
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        recipes = [
-            {
-                "id": i,
-                "title": hit["recipe"]["label"],
-                "image": hit["recipe"].get("image", ""),
-                "url": hit["recipe"].get("url", ""),
-                "description": hit["recipe"].get("source", "No description available")
-            }
-            for i, hit in enumerate(data.get("hits", []))
-        ]
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching recipes: {e}")
-        recipes = []
-
-    return render_template('recipes.html', recipes=recipes, query=query)
+# _______________________________________________________________________________________________________________________________#
+#                                                          LOGIN/REGISTER                                                        #                                
+# _______________________________________________________________________________________________________________________________#
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -239,13 +143,112 @@ def logout():
     flash("You have been logged out.")
     return redirect(url_for("index"))
 
-@app.route('/contact')
-def contact():
-    return render_template('contact.html')
+@app.route("/photos", methods=["GET"])
+def photos():
+    category = request.args.get('category', 'interior')
+    query = request.args.get('query', '')
 
-@app.route('/about')
-def about():
-    return render_template('about.html')
+    url = "https://api.unsplash.com/search/photos"
+    headers = {
+        "Authorization": "Client-ID jFzLzxaW0qjrN4uxry35H7Fchc9ObBt0copcgEGfRDE"
+    }
+    params = {
+        "query": f"{category} {query}",
+        "per_page": 20,
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+    data = response.json()
+    images = [
+        {
+            "id": i,
+           "url": img["urls"]["regular"],
+            "description": img.get("description", "No description available")
+        }
+        for i, img in enumerate(data["results"])
+    ]
+
+    return render_template('photos.html', images=images, category=category)
+
+# _______________________________________________________________________________________________________________________________#
+#                                                          CATEGORIES                                                            #                                
+# _______________________________________________________________________________________________________________________________#
+
+
+@app.route('/art', methods=['GET', 'POST'])
+def art():
+    api_url = "https://www.rijksmuseum.nl/api/en/collection"
+    query = request.args.get('query', '')
+    page = request.args.get('page', 1)
+
+    params = {
+        "key": "wKdQj5hU",
+        "q": query,
+        "ps": 20,
+        "imgonly": True,
+        "p": page
+    }
+
+    artworks = []
+    try:
+        response = requests.get(api_url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        for i, item in enumerate(data.get("artObjects", [])):
+            image_url = item.get("webImage", {}).get("url", None)
+            if not image_url:
+                continue
+
+            artworks.append({
+                "id": i,
+                "title": item.get("title", "Untitled"),
+                "artist": item.get("principalOrFirstMaker", "Unknown"),
+                "image_url": image_url,
+                "info_url": item.get("links", {}).get("web", "#")
+            })
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data from Rijksmuseum API: {e}")
+
+    return render_template('art.html', artworks=artworks, query=query, page=page)
+
+@app.route('/recipes', methods=['GET'])
+def recipes():
+    query = request.args.get('query', '')
+    url = "https://api.edamam.com/search"
+    params = {
+        "q": query,
+        "app_id": "482eb6d9",
+        "app_key": "d8b388214cd3dd949a059e7967b004cc",
+        "to": 8
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        recipes = [
+            {
+                "id": i,
+                "title": hit["recipe"]["label"],
+                "image": hit["recipe"].get("image", ""),
+                "url": hit["recipe"].get("url", ""),
+                "description": hit["recipe"].get("source", "No description available")
+            }
+            for i, hit in enumerate(data.get("hits", []))
+        ]
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching recipes: {e}")
+        recipes = []
+
+    return render_template('recipes.html', recipes=recipes, query=query)
+
+
+
+# _______________________________________________________________________________________________________________________________#
+#                                                       SAVE/DELETE ITEMS                                                        #                                
+# _______________________________________________________________________________________________________________________________#
 
 @app.route('/save/<item_type>', methods=["POST"])
 @login_required
@@ -254,12 +257,12 @@ def save_item(item_type):
     data = request.form
 
     if item_type == "photo":
-        user_id = session.get("user_id")  
-        image_id = request.form.get("image_id")  
         url = request.form.get("image_url")
         description = request.form.get("description", "No description available")
+        # Create unique image_id, with a hash
+        image_id = hashlib.md5(url.encode()).hexdigest()
 
-        if not image_id or not url:
+        if not url:
             flash("Missing image data.", "error")
             return redirect(request.referrer)
 
@@ -279,26 +282,52 @@ def save_item(item_type):
         db.session.commit()
 
         flash("Image liked successfully!", "success")
-            
+    
+    elif item_type == "art":
+        title = data.get("title")
+        artist = data.get("artist", "Unknown")
+        url = data.get("info_url")
+        image_url = data.get("image_url")
+        art_id = hashlib.md5(url.encode()).hexdigest()
+
+        if not title or not url:
+            return jsonify({"success": False, "message": "Missing art data"}), 400
+
+        existing = SavedArt.query.filter_by(user_id=user_id, id=art_id).first()
+        if existing:
+            flash("Already liked the artwork")
+            return redirect(request.referrer)
+
+        new_item = SavedArt(
+            user_id=user_id,
+            id=art_id,
+            title=title,
+            artist=artist,
+            info_url=url,
+            image_url=image_url
+        )
+        db.session.add(new_item)
+        db.session.commit()
+        flash("Artwork saved successfully!", "success")
 
     elif item_type == "recipe":
-        item_id = data.get("recipe_id")
+        recipe_id = data.get("recipe_id")
         label = data.get("recipe_title")
         url = data.get("recipe_url")
         description = data.get("recipe_description", "No description available")
         recipe_image = data.get("recipe_image")
 
-        if not item_id or not url or not label:
+        if not url or not label:
             return jsonify({"success": False, "message": "Missing recipe data"}), 400
 
-        existing = SavedRecipe.query.filter_by(user_id=user_id, id=item_id).first()
+        existing = SavedRecipe.query.filter_by(user_id=user_id, id=recipe_id).first()
         if existing:
             flash("Already liked the recipe")
             return redirect(request.referrer)
 
         new_item = SavedRecipe(
             user_id=user_id,
-            recipe_id=item_id,
+            recipe_id=recipe_id,
             label=label,
             url=url,
             description=description,
@@ -309,37 +338,9 @@ def save_item(item_type):
 
         flash("Recipe saved successfully!", "success")
         
-
-    elif item_type == "art":
-        item_id = data.get("art_id")
-        title = data.get("title")
-        artist = data.get("artist", "Unknown")
-        url = data.get("info_url")
-        image_url = data.get("image_url")
-
-        if not item_id or not title or not url:
-            return jsonify({"success": False, "message": "Missing art data"}), 400
-
-        existing = SavedArt.query.filter_by(user_id=user_id, id=item_id).first()
-        if existing:
-            flash("Already liked the artwork")
-            return redirect(request.referrer)
-
-        new_item = SavedArt(
-            user_id=user_id,
-            id=item_id,
-            title=title,
-            artist=artist,
-            info_url=url,
-            image_url=image_url
-        )
-        new_item.likes = 1
-
-        db.session.add(new_item)
-        db.session.commit()
-        flash("Artwork saved successfully!", "success")
     
     return redirect(request.referrer)
+
 
 @app.route('/delete/<item_type>', methods=["POST"])
 @login_required
@@ -379,6 +380,12 @@ def delete_item(item_type):
 
     return redirect(url_for(redirect_route))
 
+
+# _______________________________________________________________________________________________________________________________#
+#                                                       FAVORITES PAGE                                                           #                                
+# _______________________________________________________________________________________________________________________________#
+
+
 @app.route('/favorites_photos')
 @login_required
 def favorites_photos():
@@ -402,52 +409,49 @@ def favorites_recipes():
     return render_template('favorites_recipes.html', saved_recipes=saved_recipes)
 
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    data = request.get_json()
-    user_message = data.get('message', '')
 
-    if not user_message:
-        return jsonify({"error": "No message provided"}), 400
+# _______________________________________________________________________________________________________________________________#
+#                                                        DOODLES PAGE                                                            #                                
+# _______________________________________________________________________________________________________________________________#
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Gebruik "gpt-4" als je toegang hebt tot GPT-4
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": user_message},
-            ]
-        )
-        reply = response['choices'][0]['message']['content']
-        return jsonify({"reply": reply})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
-@app.route("/doodles")
+@app.route("/doodles", defaults={"date": None})
+@app.route("/doodles/<date>")
 @login_required
-def doodles():
-    today = datetime.now().date()
+def doodles(date):
+    # Probeer de opgegeven datum te gebruiken, anders gebruik de huidige datum
+    if date:
+        try:
+            selected_date = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            flash("Invalid date format. Please use YYYY-MM-DD.", "error")
+            return redirect(url_for("doodles"))
+    else:
+        selected_date = datetime.now().date()
 
-    todays_doodles = Doodle.query.filter(Doodle.date == today).all()
+    # Haal de doodles van de geselecteerde datum
+    todays_doodles = Doodle.query.filter(Doodle.date == selected_date).all()
 
-    if not todays_doodles:
+    # Als er geen doodle is voor vandaag, maak een nieuwe (alleen als het 'today' is)
+    if not todays_doodles and not date:
         filename = generate_daily_scribble()
-        new_doodle = Doodle(filename=filename, date=today)
+        new_doodle = Doodle(filename=filename, date=selected_date)
         db.session.add(new_doodle)
         db.session.commit()
         todays_doodles = [new_doodle]
 
+    # Haal de user submissions en likes op
     submissions = (
         db.session.query(UserDoodle, func.count(Like.id).label("like_count"))
         .join(Doodle, Doodle.id == UserDoodle.doodle_id)
         .outerjoin(Like, Like.doodle_id == UserDoodle.id)
-        .filter(Doodle.date == today)
+        .filter(Doodle.date == selected_date)
         .group_by(UserDoodle.id)
         .all()
     )
 
+    # Bereken statistieken
     total_likes = sum(like_count for _, like_count in submissions)
-
     max_likes = max((like_count for _, like_count in submissions), default=0)
     most_liked_doodles = [
         {"doodle": submission, "like_count": like_count}
@@ -455,14 +459,16 @@ def doodles():
         if like_count == max_likes
     ]
 
+    # Likes van de ingelogde gebruiker
     user_likes = {like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()}
 
+    # Haal alle unieke datums op
     all_dates = db.session.query(Doodle.date).distinct().order_by(Doodle.date.desc()).all()
 
-
+    # Render de doodles.html template met de juiste data
     return render_template(
         "doodles.html",
-        today = today,
+        today=selected_date,
         todays_doodles=todays_doodles,
         submissions=submissions,
         total_likes=total_likes,
@@ -522,47 +528,11 @@ def like_doodle(doodle_id):
     db.session.commit()
     return redirect(request.referrer)
 
-@app.route("/doodles_by_date/<date>")
-@login_required
-def doodles_by_date(date):
-    try:
-        selected_date = datetime.strptime(date, "%Y-%m-%d").date()
-    except ValueError:
-        flash("Invalid date format. Please use YYYY-MM-DD.", "error")
-        return redirect(url_for("doodles"))
 
-    selected_doodles = Doodle.query.filter(Doodle.date == selected_date).all()
+# _______________________________________________________________________________________________________________________________#
+#                                                       API TOKEN                                                                #                                
+# _______________________________________________________________________________________________________________________________#
 
-    submissions = (
-        db.session.query(UserDoodle, func.count(Like.id).label("like_count"))
-        .join(Doodle, Doodle.id == UserDoodle.doodle_id)
-        .outerjoin(Like, Like.doodle_id == UserDoodle.id)
-        .filter(Doodle.date == selected_date)
-        .group_by(UserDoodle.id)
-        .all()
-    )
-
-    total_likes = sum([like_count for _, like_count in submissions])
-
-    max_likes = max([like_count for _, like_count in submissions], default=0)
-    most_liked_doodles = [
-        {"doodle": submission, "like_count": like_count}
-        for submission, like_count in submissions
-        if like_count == max_likes
-    ]
-
-    all_dates = db.session.query(Doodle.date).distinct().order_by(Doodle.date.desc()).all()
-
-    return render_template(
-        "doodles.html",
-        today=selected_date,
-        todays_doodles=selected_doodles,
-        submissions=submissions,
-        total_likes=total_likes,
-        most_liked_doodles=most_liked_doodles,
-        user_likes={like.doodle_id for like in Like.query.filter_by(user_id=session['user_id']).all()},
-        all_dates=all_dates
-    )
 
 @app.route("/api/doodles/filter", methods=["GET"])
 def filter_doodles():

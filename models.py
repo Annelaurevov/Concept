@@ -24,16 +24,6 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
 
-class Comment(db.Model):
-    __tablename__ = "comments"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    item_type = db.Column(db.String, nullable=False)  # 'photo', 'recipe', or 'art'
-    item_id = db.Column(db.String, nullable=False)  # The ID of the specific item
-    text = db.Column(db.String, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
-
 class SavedImage(db.Model):
     __tablename__ = "saved_images"
     id = db.Column(db.Integer, primary_key=True)
@@ -45,7 +35,7 @@ class SavedImage(db.Model):
 
 class SavedArt(db.Model):
     __tablename__ = "saved_art"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     title = db.Column(db.String, nullable=False)
     artist = db.Column(db.String, nullable=True)

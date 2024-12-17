@@ -4,31 +4,42 @@
 
 {% block main %}
 <div class="search-bar">
-    <form method="GET" action="{{ url_for('recipes') }}">
-        <input type="text" name="query" placeholder="Search for artworks" value="{{ request.args.get('query', '') }}">
+    <form method="GET" action="{{ url_for('art') }}">
+        <input type="text" name="query" placeholder="Search for artworks"  value="{{ request.args.get('query', '') }}">
         <button type="submit">Search</button>
     </form>
 </div>
-<div class="art-gallery">
-    {% if artworks %}
+
+{% if artworks %}
+    <div class="art-gallery">
         {% for artwork in artworks %}
         <div class="art-card">
-            <img src="{{ artwork.image_url }}" alt="{{ artwork.title }}" onerror="this.src='https://via.placeholder.com/300';">
+            <img src="{{ artwork.image_url }}" alt="{{ artwork.title }}" 
+                 onerror="this.src='https://via.placeholder.com/300';">
             <h3>{{ artwork.title }}</h3>
             <p><strong>Artist:</strong> {{ artwork.artist }}</p>
-            <a href="{{ artwork.info_url }}" target="_blank"></a>
+            <a href="{{ artwork.info_url }}" target="_blank" class="info-link">More Info</a>
             <form method="POST" action="{{ url_for('save_item', item_type='art') }}">
                 <input type="hidden" name="art_id" value="{{ artwork.id }}">
                 <input type="hidden" name="title" value="{{ artwork.title }}">
                 <input type="hidden" name="artist" value="{{ artwork.artist }}">
                 <input type="hidden" name="info_url" value="{{ artwork.info_url }}">
-                <input type="hidden" name="image_url" value="{{ artwork.image_url }}"> <!-- Nieuwe veld -->
+                <input type="hidden" name="image_url" value="{{ artwork.image_url }}">
                 <button type="submit" class="heart-button">♥</button>
-            </form>            
+            </form> 
         </div>
         {% endfor %}
-    {% else %}
-        <p>No artworks found. Try another search term.</p>
-    {% endif %}
-</div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination">
+        {% if page | int > 1 %}
+            <a href="{{ url_for('art', page=page|int - 1) }}" class="pagination-link">Previous</a>
+        {% endif %}
+        <span class="current-page">Page {{ page }}</span>
+        <a href="{{ url_for('art', page=page|int + 1) }}" class="pagination-link">Next</a>
+    </div>
+{% else %}
+    <p>No artworks found. Try another search term.</p>
+{% endif %}
 {% endblock %}

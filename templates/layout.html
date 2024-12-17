@@ -16,8 +16,6 @@
             </div>
             <nav class="navbar">
                 <ul class="nav-links">
-                    <li><a href="{{ url_for('contact') }}">Contact</a></li>
-                    <li><a href="{{ url_for('about') }}">About Us</a></li>
                     {% if not session.get("user_id") %}
                         <li><a href="{{ url_for('login') }}">Log In</a></li>
                         <li><a href="{{ url_for('register') }}">Register</a></li>
