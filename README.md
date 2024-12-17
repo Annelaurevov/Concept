@@ -1,131 +1,137 @@
 # Concept - Inspire Your Artistry
 
-**Auteur**: Annelaure van Overbeeke
+**Author**: Annelaure van Overbeeke
 
-Concept website is een platform ontworpen voor artiesten en creatieve geesten om inspiratie te vinden, kunstwerken te delen, en creatieve skills te verbeteren. Van het opslaan van foto's, kunstwerken en recepten tot het spelen van een dagelijkse creatieve uitdaging genaamd "Doodle" – Concept is dé plek om creativiteit te laten bloeien.
-
----
-
-## **Over het project**
-
-Creatify biedt een inspiratieplek waar gebruikers hun ideeën kunnen bewaren en uitbreiden. Het platform bestaat uit verschillende functies:
-
-- **Opslaan van Inspiratie**: Upload en bewaar foto's, kunstwerken, en recepten op één plek.
-- **Doodle Spel**: Een dagelijkse uitdaging waar een willekeurige kras je uitdaagt om een unieke tekening te maken. 
-- **Ranking & Likes**: Bekijk populaire doodles per dag, like jouw favorieten, en verbeter je score in de ranglijst.
-- **Openbare API**: Ontwikkelaars kunnen toegang krijgen tot ingezonden doodles via een API.
-
-Creatify combineert community, creativiteit, en technologie in één platform.
+Concept is a web application designed to inspire creativity by allowing users to explore, save, and share artistic ideas. This includes daily challenges, a gallery of user submissions, and organizational tools for creative projects.
 
 ---
 
-## **Features**
+<h2 align="center">Table of Contents</h2>
 
-### **Opslag voor inspiratie**
-Bewaar en organiseer afbeeldingen, recepten, en kunstwerken. Perfect om een moodboard te maken of ideeën voor je volgende project vast te leggen.
-
-### **Doodle Spel**
-Laat je creativiteit de vrije loop met het dagelijkse Doodle-spel:
-1. Elke dag wordt een willekeurige kras (scribble) gegenereerd.
-2. Maak een tekening gebaseerd op de kras.
-3. Upload je kunstwerk en deel het met de community.
-4. Verzamel likes en kom in de dagelijkse ranglijst!
-
-### **Community Features**
-- Bekijk en like kunstwerken van andere gebruikers.
-- Doe inspiratie op door rond te kijken in de openbare galerie.
-
-### **Openbare API**
-Creatify biedt een API waarmee externe ontwikkelaars toegang krijgen tot doodles, inclusief informatie over likes en uploaddata. Ideaal voor integratie in andere creatieve applicaties.
+- [Introduction](#introduction)
+- [Features](#features)
+- [Installation](#installation)
+- [API Usage](#api-usage)
+- [Screenshots](#screenshots)
+- [Project Structure](#project-structure)
+- [Acknowledgments](#acknowledgments)
 
 ---
 
-## **Installatie**
+<h2>Introduction</h2>
 
-### **Benodigdheden**
-1. **Python 3.10+**
-2. Virtuele omgeving: `venv`
-3. PostgresSQL database
+Concept is a web application designed to foster creativity and inspiration. Whether you're a professional artist, a hobbyist, or just looking for some creative fun, Concept offers tools to save and share your ideas while connecting with a community of like-minded individuals.
 
-### **Stappen**
-1. Clone de repository:
+**Key Features:**
+- Save and organize ideas like photos, recipes, and artworks.
+- Participate in a daily "Doodle of the Day" challenge.
+- Explore and interact with a gallery of community submissions.
+- Use the public API to integrate Concept data into your own projects.
+
+---
+
+<h2 align="center">Features</h2>
+
+### **1. Creative Organization**
+- Store and organize inspirations such as images, recipes, and artworks.
+- Create collections or mood boards for your creative projects.
+
+### **2. Daily Doodle Challenge**
+- Generate a random scribble each day to inspire your artwork.
+- Draw over the scribble, submit your creation, and gain likes.
+- Compete on daily leaderboards to showcase your creativity.
+
+### **3. Community Interaction**
+- Browse and like submissions from other users.
+- Gain inspiration from the shared gallery.
+
+### **4. Public API**
+- Access data from Concept using the public API.
+- Retrieve information about submissions, likes, and users to create your own integrations.
+
+---
+
+<h2 align="center">Installation</h2>
+
+### Prerequisites
+- Python 3.10+
+- PostgreSQL
+
+### Installation Steps
+
+1. **Clone the repository:**
    ```bash
-   git clone https://github.com/jouw-repo-url
-   cd jouw-repo
+   git clone https://github.com/your-repo/concept.git
+   cd concept
    ```
 
-2. Installeer vereisten:
+2. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Maak een `.env` bestand en voeg de vereiste configuraties toe:
-   ```
-   DATABASE_URL=postgresql://<gebruikersnaam>:<wachtwoord>@localhost/<database>
-   SECRET_KEY=mijn-geheime-sleutel
+3. **Create a `.env` file with the following:**
+   ```env
+   DATABASE_URL=postgresql://<user>:<password>@localhost/<database>
+   SECRET_KEY=your-secret-key
    ```
 
-4. Initializeer de database:
+4. **Initialize the database:**
    ```bash
    flask db upgrade
-   python create.py
    ```
 
-5. Start de server:
+5. **Start the application:**
    ```bash
    flask run
    ```
 
-6. Ga naar [http://localhost:5000](http://localhost:5000) om Creatify te gebruiken!
+6. **Access the application:** Open your browser and go to `http://127.0.0.1:5000`.
 
 ---
 
-## **API-Gebruik**
+<h2 align="center">API Usage</h2>
 
-De Creatify API biedt toegang tot de ingezonden doodles:
+### API Endpoints
+- **`GET /api/doodles`**: Retrieve all doodles.
+- **`GET /api/doodles/filter?date=YYYY-MM-DD`**: Get doodles for a specific date.
 
-### **Endpoints**
-- **`GET /api/doodles`**: Haal alle doodles op.
-- **`GET /api/doodles/filter?date=YYYY-MM-DD`**: Haal doodles op een specifieke datum op.
-- **`POST /api/doodles`**: Voeg een nieuwe doodle toe (vereist authenticatie).
-
-### **Voorbeeld Curl-aanroep**
+### Example Request
 ```bash
-curl -H "x-api-key: mijn-doodles" http://localhost:5000/api/doodles/filter?date=2024-12-16
+curl http://127.0.0.1:5000/api/doodles/filter?date=2024-12-17
 ```
 
 ---
 
-## **Screenshots**
+<h2 align="center">Screenshots</h2>
 
-### **Hoofdpagina**
-Inspiratie overzicht en toegang tot opgeslagen ideeën.
+### **Homepage**
+![Homepage](static/screenshots/homepage.png)
 
-![Hoofdpagina](data/images/homepage.png)
-
-### **Doodle-spel**
-Kijk hoe een simpele kras verandert in een kunstwerk.
-
-![Doodle Spel](data/images/doodle-game.png)
+### **Doodle Challenge**
+![Doodle Challenge](static/screenshots/doodle.png)
 
 ---
 
-## **Projectstructuur**
+<h2 align="center">Project Structure</h2>
 
-- **`/app.py`**: Beheert de routes en functionaliteit van de applicatie.
-- **`/models.py`**: Database-modellen voor gebruikers, doodles, en andere tabellen.
-- **`/scribble.py`**: Logica voor het genereren van dagelijkse doodles.
-- **`/static/` en `/templates/`**: Bevat statische bestanden en HTML-templates.
-- **`/requirements.txt`**: Lijst van benodigde Python-packages.
-
----
-
-## **Referenties**
-
-1. [Flask Documentation](https://flask.palletsprojects.com/)
-2. [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-3. [Jinja2 Templating](https://jinja.palletsprojects.com/)
+- **`app.py`**: Core application logic.
+- **`models.py`**: Database models for users, doodles, and saved items.
+- **`scribble.py`**: Logic for generating the daily doodles.
+- **`static/`**: Static assets like CSS, images, and JavaScript files.
+- **`templates/`**: HTML templates for rendering the UI.
 
 ---
 
-Creatify is een project gemaakt met passie voor creativiteit en community. Gebruik het, deel je kunst, en laat je inspireren!
+<h2 align="center">Acknowledgments</h2>
+
+This project was created with inspiration from tools like Google Doodle and community-driven platforms. Special thanks to the following resources and individuals for their guidance and support:
+
+- **Brian Yu and David Malan**: Materials from Harvard's CSCI S-33a course, published under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 Unported license.
+- **David Malan**: CS164 course materials from Harvard, published under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 Unported license.
+- **Open-source contributors**: For their amazing tools and libraries that made this project possible.
+
+---
+
+Concept is a project fueled by passion for creativity and collaboration. Share your art, explore new ideas, and inspire others!
+

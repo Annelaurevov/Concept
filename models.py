@@ -1,8 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 
 db = SQLAlchemy()
+
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -17,7 +17,8 @@ class User(db.Model):
 
     def set_password(self, password):
         """Hash the password and save it using a compatible method."""
-        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        self.password_hash = generate_password_hash(password,
+                                                    method='pbkdf2:sha256')
 
     def check_password(self, password):
         """Check if the provided password matches the stored hash."""
@@ -31,17 +32,19 @@ class SavedImage(db.Model):
     image_id = db.Column(db.String, nullable=False)
     url = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=True)
-    likes = db.Column(db.Integer, default=0)  # Likes column added
+    likes = db.Column(db.Integer, default=0)
+
 
 class SavedArt(db.Model):
     __tablename__ = "saved_art"
-    id = db.Column(db.String, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     title = db.Column(db.String, nullable=False)
     artist = db.Column(db.String, nullable=True)
     info_url = db.Column(db.String, nullable=False)
-    likes = db.Column(db.Integer, default=0) 
-    image_url = db.Column(db.String, nullable=True) 
+    likes = db.Column(db.Integer, default=0)
+    image_url = db.Column(db.String, nullable=True)
+
 
 class SavedRecipe(db.Model):
     __tablename__ = "saved_recipes"
@@ -52,7 +55,8 @@ class SavedRecipe(db.Model):
     url = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=True)
     recipe_image = db.Column(db.String(10000), nullable=True)
-    likes = db.Column(db.Integer, default=0)  
+    likes = db.Column(db.Integer, default=0)
+
 
 class Doodle(db.Model):
     __tablename__ = "doodles"
@@ -62,19 +66,21 @@ class Doodle(db.Model):
     date = db.Column(db.Date, nullable=False)
     submissions = db.relationship("UserDoodle", backref="doodle", lazy=True)
 
+
 class UserDoodle(db.Model):
     __tablename__ = "user_doodles"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    doodle_id = db.Column(db.Integer, db.ForeignKey("doodles.id"), nullable=False)
+    doodle_id = db.Column(db.Integer, db.ForeignKey("doodles.id"),
+                          nullable=False)
     filename = db.Column(db.String, nullable=False)
     likes = db.Column(db.Integer, default=0)
-
     user = db.relationship('User', backref='user_doodles', lazy=True)
+
 
 class Like(db.Model):
     __tablename__ = 'likes'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    doodle_id = db.Column(db.Integer, db.ForeignKey('user_doodles.id'), nullable=False)
-
+    doodle_id = db.Column(db.Integer, db.ForeignKey('user_doodles.id'),
+                          nullable=False)

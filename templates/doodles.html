@@ -57,30 +57,34 @@
             <p><strong>Likes:</strong> {{ like_count }}</p>
             <form method="POST" action="{{ url_for('like_doodle', doodle_id=submission.id) }}">
                 {% set liked = submission.id in user_likes %}
-                <button type="submit" class="heart-button" style="color: {{ 'red' if liked else 'gray' }};">
-                    ♥
-                </button>
-                
+                {% if liked %}
+                    <button type="submit" class="heart-button" style="color: red;">
+                        ♥
+                    </button>
+                {% else %}
+                    <button type="submit" class="heart-button" style="color: white;">
+                        ♥
+                    </button>
+                {% endif %}
             </form>        
         </div>
         {% else %}
         <p>No submissions available.</p>
         {% endfor %}
     </div>
-
     <div class="date-selection-container">
         <h3>Past Doodles</h3>
         <form method="GET">
             <label for="date-select">Choose a Date:</label>
             <select id="date-select" name="date" onchange="window.location.href=this.value;">
                 {% for date in all_dates %}
-                <option value="{{ url_for('doodles', date=date[0]) }}"
-                        {% if date[0] == today %}selected{% endif %}>
-                    {{ date[0] }}
-                </option>
+                    <option value="{{ url_for('doodles', date=date) }}" {% if date == today %}selected{% endif %}>
+                        {{ date }}
+                    </option>
                 {% endfor %}
-            </select>
+            </select>                   
         </form>
-    </div>    
+    </div>      
 </div>
 {% endblock %}
+
