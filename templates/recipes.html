@@ -7,10 +7,10 @@
     <form method="GET" action="{{ url_for('recipes') }}">
         <input type="text" name="query" placeholder="Search for recipes" value="{{ request.args.get('query', '') }}">
         <select name="category">
-            <option value="all" {% if category == 'all' %}selected{% endif %}>All Diets</option>
-            <option value="vegan" {% if category == 'vegan' %}selected{% endif %}>Vegan</option>
-            <option value="vegetarian" {% if category == 'vegetarian' %}selected{% endif %}>Vegetarian</option>
-            <option value="gluten-free" {% if category == 'gluten-free' %}selected{% endif %}>Gluten-Free</option>
+            <option value="all" {% if request.args.get('category', 'all') == 'all' %}selected{% endif %}>All Diets</option>
+            <option value="vegan" {% if request.args.get('category') == 'vegan' %}selected{% endif %}>Vegan</option>
+            <option value="vegetarian" {% if request.args.get('category') == 'vegetarian' %}selected{% endif %}>Vegetarian</option>
+            <option value="gluten-free" {% if request.args.get('category') == 'gluten-free' %}selected{% endif %}>Gluten-Free</option>
         </select>
         <button type="submit">Search</button>
     </form>
@@ -20,18 +20,17 @@
     {% if recipes %}
         {% for recipe in recipes %}
         <div class="art-card">
-            <img src="{{ recipe.image }}" alt="{{ recipe.title }}" class="recipe-image">
+            <img src="{{ recipe.image or 'https://via.placeholder.com/300' }}" alt="{{ recipe.title }}" class="recipe-image">
             <h3>{{ recipe.title }}</h3>
             <p>{{ recipe.description }}</p>
             <a href="{{ recipe.url }}" target="_blank">View Recipe</a>
             <form method="POST" action="{{ url_for('save_item', item_type='recipe') }}">
-                <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
-                <input type="hidden" name="recipe_title" value="{{ recipe.title }}">
-                <input type="hidden" name="recipe_url" value="{{ recipe.url }}">
-                <input type="hidden" name="recipe_description" value="{{ recipe.description }}">
-                <input type="hidden" name="recipe_image" value="{{ recipe.image }}"> <!-- Zorg dat dit klopt -->
+                <input type="hidden" name="title" value="{{ recipe.title }}">
+                <input type="hidden" name="url" value="{{ recipe.url }}">
+                <input type="hidden" name="image" value="{{ recipe.image }}">
+                <input type="hidden" name="description" value="{{ recipe.description }}">
                 <button type="submit" class="heart-button">♥</button>
-            </form>            
+            </form>           
         </div>
         {% endfor %}
     {% else %}

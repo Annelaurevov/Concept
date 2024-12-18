@@ -9,10 +9,10 @@
         {% for recipe in saved_recipes %}
         <div class="art-card">
             <img src="{{ recipe.recipe_image or 'https://via.placeholder.com/300' }}" alt="{{ recipe.label }}">
-            <p>{{ recipe.label }}</p>
+            <h3>{{ recipe.title }}</h3>
             <a href="{{ recipe.url }}" target="_blank">View Recipe</a>
             <form method="POST" action="{{ url_for('delete_item', item_type='recipe') }}">
-                <input type="hidden" name="item_id" value="{{ recipe.recipe_id }}">
+                <input type="hidden" name="item_id" value="{{ recipe.id }}">
                 <button type="submit">Remove</button>
             </form>
         </div>

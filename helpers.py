@@ -36,15 +36,15 @@ def login_required(f):
 
 def generate_hash(value):
     """
-    Generate a unique hash for a given value.
+    Generate a unique hash for a given value using SHA256.
 
     Args:
         value (str): The input value to hash.
 
     Returns:
-        str: A unique hash generated using MD5.
+        str: A unique hash generated using SHA256.
     """
-    return hashlib.md5(value.encode()).hexdigest()
+    return hashlib.sha256(value.encode()).hexdigest()
 
 
 def save_uploaded_file(file, upload_folder):
@@ -83,12 +83,12 @@ def fetch_api_data(api_url, params=None, headers=None):
     """
     try:
         response = requests.get(api_url, params=params, headers=headers)
-        response.raise_for_status()  # Raise HTTPError for bad status codes
+        response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
         print(f"Error fetching API data: {e}")
-        flash("An error occurred while fetching data from the API.", "error")
         return None
+
 
 # __________________________________________________________________________#
 #                         ITEM PROCESSING FUNCTIONS                         #
@@ -110,6 +110,14 @@ def process_photo(data, user_id):
 
     # Generate image_id as a unique hash of the image_url
     image_id = md5(image_url.encode()).hexdigest()
+    # Controleer of de foto al bestaat
+    existing_photo = SavedImage.query.filter_by(
+        user_id=user_id,
+        image_id=image_id
+    ).first()
+    if existing_photo:
+        flash("Photo already saved.", "info")
+        return
 
     new_image = SavedImage(
         user_id=user_id,
@@ -135,6 +143,15 @@ def process_art(data, user_id):
         data (dict): The form data containing art information.
         user_id (int): The ID of the user saving the art.
     """
+    existing_art = SavedArt.query.filter_by(
+        user_id=user_id,
+        title=data.get("title")
+    ).first()
+
+    if existing_art:
+        flash("Artwork is already saved!", "info")
+        return
+
     new_art = SavedArt(
         user_id=user_id,
         title=data.get("title", "Untitled"),
@@ -155,21 +172,41 @@ def process_art(data, user_id):
 def process_recipe(data, user_id):
     """
     Process and save a recipe item for the user.
-
-    Args:
-        data (dict): The form data containing recipe information.
-        user_id (int): The ID of the user saving the recipe.
     """
+    recipe_title = data.get("title")
+    recipe_url = data.get("url")
+    recipe_image = data.get("image")
+    description = data.get("description", "No description available")
+
+    if not recipe_title or not recipe_url:
+        flash("Invalid recipe data. Title and URL are required.", "error")
+        return
+
+    recipe_id = md5(recipe_url.encode()).hexdigest()
+
+    existing_recipe = SavedRecipe.query.filter_by(
+        user_id=user_id,
+        recipe_id=recipe_id
+    ).first()
+    if existing_recipe:
+        flash("Recipe already saved.", "info")
+        return
+
     new_recipe = SavedRecipe(
         user_id=user_id,
-        title=data.get("title"),
-        url=data.get("url"),
-        image=data.get("image"),
-        description=data.get("description", "")
+        recipe_id=recipe_id,
+        title=recipe_title,
+        url=recipe_url,
+        recipe_image=recipe_image,
+        description=description,
     )
+    print("DEBUG: New recipe object created:", new_recipe)
+
     try:
         db.session.add(new_recipe)
         db.session.commit()
+        flash("Recipe saved successfully!", "success")
+        print("DEBUG: Recipe saved to database.")
     except Exception as e:
         db.session.rollback()
         flash(f"Error saving recipe: {e}", "error")
@@ -201,7 +238,7 @@ def delete_item_helper(item_type, user_id, item_id):
             (should be convertible to integer).
     """
     try:
-        item_id = int(item_id)  # Ensure item_id is an integer
+        item_id = int(item_id)
     except ValueError:
         flash("Invalid item ID format.", "error")
         return

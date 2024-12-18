@@ -51,7 +51,7 @@ class SavedRecipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     recipe_id = db.Column(db.String, nullable=False)
-    label = db.Column(db.String, nullable=False)
+    title = db.Column(db.String, nullable=False)
     url = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=True)
     recipe_image = db.Column(db.String(10000), nullable=True)

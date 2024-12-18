@@ -37,8 +37,9 @@
         <div class="art-card">
             <img src="{{ image.url }}" alt="Photo">
             <form method="POST" action="{{ url_for('save_item', item_type='photo') }}">
+                <input type="hidden" name="image_id" value="{{ image.id }}">
                 <input type="hidden" name="image_url" value="{{ image.url }}">
-                <input type="hidden" name="description" value="{{ image.description }}">
+                <input type="hidden" name="description" value="{{ image.description or 'No description available' }}">
                 <button type="submit" class="heart-button">♥</button>
             </form>
         </div>

@@ -18,6 +18,6 @@ class Config:
                                     "fallback_rijksmuseum_key")
 
     # Edamam configuratie
+    EDAMAM_APP_ID = os.getenv("EDAMAM_APP_ID")
+    EDAMAM_APP_KEY = os.getenv("EDAMAM_APP_KEY")
     EDAMAM_API_URL = "https://api.edamam.com/search"
-    EDAMAM_APP_ID = os.getenv("EDAMAM_APP_ID", "fallback_edamam_id")
-    EDAMAM_APP_KEY = os.getenv("EDAMAM_APP_KEY", "fallback_edamam_key")

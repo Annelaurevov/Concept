@@ -252,14 +252,8 @@ def art():
 
 @app.route('/recipes', methods=['GET'])
 def recipes():
-    """
-    Display recipes from the Edamam API.
-    Fetches recipe data based on the user's query.
-    """
-    # Get the user's query from the request arguments
-    query = request.args.get('query', '')
+    query = request.args.get('query', 'pastries')
 
-    # Parameters for the Edamam API request
     params = {
         "q": query,
         "app_id": Config.EDAMAM_APP_ID,
@@ -267,35 +261,30 @@ def recipes():
         "to": 8
     }
 
-    # Fetch data from the Edamam API
     data = fetch_api_data(Config.EDAMAM_API_URL, params=params)
+    print("DEBUG: Recipe Data:", data)
 
     if not data or not data.get("hits"):
         flash("No recipes found for your query.", "warning")
         return render_template('recipes.html', recipes=[], query=query)
 
-    # Process the results to extract relevant fields for rendering
     recipes = [
         {
-            "id": generate_hash(hit["recipe"]["url"]),
-            "title": hit["recipe"]["label"],
-            "image": hit["recipe"].get("image", ""),
+            "title": hit["recipe"]["label"],  # Converteer label naar title
             "url": hit["recipe"].get("url", ""),
-            "description": hit["recipe"].get(
-                "source",
-                "No description available"
-            )
+            "image": hit["recipe"].get("image", ""),
+            "description": hit["recipe"].get("source",
+                                             "No description available"),
         }
         for hit in data.get("hits", [])
-    ] if data else []
+    ]
 
-    # Render the template with the processed recipe data
     return render_template('recipes.html', recipes=recipes, query=query)
+
 
 # _________________________________________________________________________#
 #                              SAVE/DELETE ITEMS                           #
 # _________________________________________________________________________#
-
 
 @app.route('/save/<item_type>', methods=["POST"])
 @login_required
