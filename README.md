@@ -12,6 +12,7 @@ Concept is a web application designed to inspire creativity by allowing users to
 - [Features](#features)
 - [Installation](#installation)
 - [API Usage](#api-usage)
+- [Demonstration video](#demonstration-video)
 - [Screenshots](#screenshots)
 - [Project Structure](#project-structure)
 - [Acknowledgments](#acknowledgments)
@@ -97,6 +98,11 @@ curl -H "x-api-key: mijn-doodles" "http://127.0.0.1:5000/api/doodles/filter?=202
 ```
 
 ---
+
+<h2 align="center">Demonstration video</h2>
+
+You can watch the demo of this project here: 
+[Demo Video](https://www.youtube.com/watch?v=zMnwWoNiVvw)
 
 <h2 align="center">Screenshots</h2>
 
