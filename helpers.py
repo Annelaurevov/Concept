@@ -110,11 +110,12 @@ def process_photo(data, user_id):
 
     # Generate image_id as a unique hash of the image_url
     image_id = md5(image_url.encode()).hexdigest()
-    # Controleer of de foto al bestaat
+
     existing_photo = SavedImage.query.filter_by(
         user_id=user_id,
         image_id=image_id
     ).first()
+
     if existing_photo:
         flash("Photo already saved.", "info")
         return
@@ -171,7 +172,14 @@ def process_art(data, user_id):
 
 def process_recipe(data, user_id):
     """
-    Process and save a recipe item for the user.
+    Fetch all favorites of a specific user for a given model.
+
+    Args:
+        model (db.Model): The SQLAlchemy model to query.
+        user_id (int): The ID of the user whose favorites to fetch.
+
+    Returns:
+        list: A list of items from the specified model belonging to the user.
     """
     recipe_title = data.get("title")
     recipe_url = data.get("url")
@@ -188,6 +196,7 @@ def process_recipe(data, user_id):
         user_id=user_id,
         recipe_id=recipe_id
     ).first()
+
     if existing_recipe:
         flash("Recipe already saved.", "info")
         return

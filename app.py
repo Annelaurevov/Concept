@@ -2,35 +2,23 @@ import os
 from config import Config
 from flask_migrate import Migrate
 from flask import (
-    Flask,
-    render_template,
-    request,
-    session,
-    redirect,
-    flash,
-    url_for,
-    jsonify,
+    Flask, render_template,
+    request, session,
+    redirect, flash,
+    url_for, jsonify,
 )
 from flask_session import Session
 from scribble import generate_daily_scribble
 from datetime import datetime
 from helpers import (
-    fetch_api_data,
-    generate_hash,
-    login_required,
-    process_photo,
-    process_art,
-    process_recipe,
-    delete_item_helper,
-    fetch_user_favorites,
-    fetch_doodles_by_date,
-    fetch_doodle_submissions_and_likes,
-    calculate_doodle_statistics,
-    fetch_user_likes,
-    fetch_all_doodle_dates,
-    save_uploaded_file,
-    get_todays_doodle,
-    add_user_doodle
+    fetch_api_data, generate_hash,
+    login_required, process_photo,
+    process_art, process_recipe,
+    delete_item_helper, fetch_user_favorites,
+    fetch_doodles_by_date, fetch_doodle_submissions_and_likes,
+    calculate_doodle_statistics, fetch_user_likes,
+    fetch_all_doodle_dates, save_uploaded_file,
+    get_todays_doodle, add_user_doodle
 )
 from models import db, Doodle, SavedImage, SavedArt, SavedRecipe, Like, User
 
@@ -64,16 +52,20 @@ def index():
     headers = {"Authorization": f"Client-ID {Config.UNSPLASH_API_KEY}"}
     params = {"count": 40, "query": Config.UNSPLASH_DEFAULT_QUERY}
 
-    # Fetch data from Unsplash API
-    data = fetch_api_data(Config.UNSPLASH_RANDOM_URL,
-                          params=params, headers=headers)
-
-    # Extract and format image data
-    images = [
-        {"id": generate_hash(img["urls"]["regular"]),
-         "url": img["urls"]["regular"]}
-        for img in data if "urls" in img and "regular" in img["urls"]
-    ] if data else []
+    try:
+        # Fetch data from Unsplash API
+        data = fetch_api_data(Config.UNSPLASH_RANDOM_URL,
+                              params=params, headers=headers)
+        # Extract and format image data
+        images = [
+            {"id": generate_hash(img["urls"]["regular"]),
+             "url": img["urls"]["regular"]}
+            for img in data if "urls" in img and "regular" in img["urls"]
+        ] if data else []
+    except Exception as e:
+        flash("Error fetching images. Please try again later.", "error")
+        print(f"Error fetching images: {e}")
+        images = []
 
     return render_template("index.html", images=images)
 
@@ -184,8 +176,25 @@ def photos():
     headers = {"Authorization": f"Client-ID {Config.UNSPLASH_API_KEY}"}
     params = {"query": f"{category} {query}", "per_page": 20}
 
-    data = fetch_api_data(Config.UNSPLASH_API_URL,
-                          params=params, headers=headers)
+    try:
+        data = fetch_api_data(Config.UNSPLASH_API_URL,
+                              params=params, headers=headers)
+        if not data or not data.get("results"):
+            flash("No photos found for your query.", "warning")
+            images = []
+        else:
+            images = [
+                {
+                    "id": generate_hash(img["urls"]["regular"]),
+                    "url": img["urls"]["regular"],
+                }
+                for img in data.get("results", [])
+                if "urls" in img and "regular" in img["urls"]
+            ]
+    except Exception as e:
+        flash("Error fetching photos. Please try again later.", "error")
+        print(f"Error fetching photos: {e}")
+        images = []
 
     if not data or not data.get("results"):
         flash("No photos found for your query.", "warning")
@@ -220,27 +229,27 @@ def art():
         "p": page
     }
 
-    data = fetch_api_data(Config.RIJKSMUSEUM_API_URL, params=params)
-
-    if not data or not data.get("artObjects"):
-        flash("No artworks found for your query.", "warning")
-        return render_template(
-            'art.html',
-            artworks=[],
-            query=query,
-            page=int(page)
-        )
-
-    artworks = [
-        {
-            "id": generate_hash(item.get("webImage", {}).get("url", "")),
-            "title": item.get("title", "Untitled"),
-            "artist": item.get("principalOrFirstMaker", "Unknown"),
-            "image_url": item.get("webImage", {}).get("url"),
-            "info_url": item.get("links", {}).get("web", "#")
-        }
-        for item in data.get("artObjects", []) if item.get("webImage")
-    ] if data else []
+    try:
+        data = fetch_api_data(Config.RIJKSMUSEUM_API_URL, params=params)
+        if not data or not data.get("artObjects"):
+            flash("No artworks found for your query.", "warning")
+            artworks = []
+        else:
+            artworks = [
+                {
+                    "id": generate_hash(item.get("webImage", {})
+                                        .get("url", "")),
+                    "title": item.get("title", "Untitled"),
+                    "artist": item.get("principalOrFirstMaker", "Unknown"),
+                    "image_url": item.get("webImage", {}).get("url"),
+                    "info_url": item.get("links", {}).get("web", "#")
+                }
+                for item in data.get("artObjects", []) if item.get("webImage")
+            ]
+    except Exception as e:
+        flash("Error fetching artworks. Please try again later.", "error")
+        print(f"Error fetching artworks: {e}")
+        artworks = []
 
     return render_template(
         'art.html',
@@ -252,8 +261,14 @@ def art():
 
 @app.route('/recipes', methods=['GET'])
 def recipes():
+    """
+    Fetch and display recipes based on a user's query.
+    Uses the Edamam API to search for recipes and renders them in a template.
+    """
+    # Get the search query from the request parameters, default to 'pastries'
     query = request.args.get('query', 'pastries')
 
+    # Prepare the parameters for the Edamam API request
     params = {
         "q": query,
         "app_id": Config.EDAMAM_APP_ID,
@@ -261,23 +276,26 @@ def recipes():
         "to": 8
     }
 
-    data = fetch_api_data(Config.EDAMAM_API_URL, params=params)
-    print("DEBUG: Recipe Data:", data)
-
-    if not data or not data.get("hits"):
-        flash("No recipes found for your query.", "warning")
-        return render_template('recipes.html', recipes=[], query=query)
-
-    recipes = [
-        {
-            "title": hit["recipe"]["label"],  # Converteer label naar title
-            "url": hit["recipe"].get("url", ""),
-            "image": hit["recipe"].get("image", ""),
-            "description": hit["recipe"].get("source",
-                                             "No description available"),
-        }
-        for hit in data.get("hits", [])
-    ]
+    try:
+        data = fetch_api_data(Config.EDAMAM_API_URL, params=params)
+        if not data or not data.get("hits"):
+            flash("No recipes found for your query.", "warning")
+            recipes = []
+        else:
+            recipes = [
+                {
+                    "title": hit["recipe"]["label"],
+                    "url": hit["recipe"].get("url", ""),
+                    "image": hit["recipe"].get("image", ""),
+                    "description": hit["recipe"]
+                    .get("source", "No description available"),
+                }
+                for hit in data.get("hits", [])
+            ]
+    except Exception as e:
+        flash("Error fetching recipes. Please try again later.", "error")
+        print(f"Error fetching recipes: {e}")
+        recipes = []
 
     return render_template('recipes.html', recipes=recipes, query=query)
 
